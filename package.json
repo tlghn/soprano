@@ -1,0 +1,22 @@
+{
+  "name": "soprano",
+  "version": "0.0.0",
+  "description": "Multi protocol socket library for NodeJs",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha tests --recursive"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tlghn/soprano.git"
+  },
+  "keywords": [
+    "socket"
+  ],
+  "author": "Tolgahan Albayrak",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tlghn/soprano/issues"
+  },
+  "homepage": "https://github.com/tlghn/soprano#readme"
+}
