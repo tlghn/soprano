@@ -1,7 +1,7 @@
 {
   "name": "soprano",
-  "version": "0.0.0",
-  "description": "Multi protocol socket library for NodeJs",
+  "version": "0.1.0",
+  "description": "Abstract Multi-protocol Socket Library for NodeJs",
   "main": "index.js",
   "scripts": {
     "test": "mocha tests --recursive"
@@ -18,5 +18,11 @@
   "bugs": {
     "url": "https://github.com/tlghn/soprano/issues"
   },
-  "homepage": "https://github.com/tlghn/soprano#readme"
+  "homepage": "https://github.com/tlghn/soprano#readme",
+  "dependencies": {
+    "awync": "^1.2.3",
+    "awync-events": "^1.1.4",
+    "calp": "^1.1.1",
+    "tupl": "^1.2.0"
+  }
 }
