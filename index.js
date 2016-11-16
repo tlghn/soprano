@@ -21,5 +21,6 @@ Soprano.SUPPRESS = awync.SUPPRESS;
 Soprano.captureErrors = awync.captureErrors;
 Soprano.releaseErrors = awync.releaseErrors;
 Soprano.run = awync;
+Soprano.isGeneratorFunction = awync.isGeneratorFunction;
 
 module.exports = Soprano;
