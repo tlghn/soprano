@@ -1,6 +1,17 @@
 # soprano
 Abstract Multi-protocol Socket Library for NodeJs
 
+## Install
+```
+npm i soprano --save
+```
+
+## Protocols
+- EchoProtocol (Built-in Echo protocol)
+- Soprano.RPCProtocol: [github](https://github.com/tlghn/soprano.rpc) / [npm](https://www.npmjs.com/package/soprano.rpc)
+Simple RPC (Remote Procedure Call) protocol with some cool features
+
+
 ## Examples
 
 ### Basic Usage
