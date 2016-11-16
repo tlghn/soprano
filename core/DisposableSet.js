@@ -28,8 +28,12 @@ class DisposableSet extends Set {
     }
 
     add(value, weak){
-        if(!this.has(value)){
-            return this;
+        if(this.has(value)){
+            if(weak){
+                super.delete(value);
+            } else {
+                return this;
+            }
         }
 
         if(weak){
