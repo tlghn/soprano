@@ -37,7 +37,7 @@ class RequestResponseProtocol extends Protocol {
 
                 let event = yield input.whichever('error', 'data');
                 let result = event.args[0];
-                result = yield this.handle(result);
+                result = yield this.handle(result, connection);
 
                 let output = yield connection.createOutput(this.createOutput());
                 yield output.end(result);
@@ -52,7 +52,7 @@ class RequestResponseProtocol extends Protocol {
         }.bind(this, connection));
     }
 
-    *handle(data){
+    *handle(data, connection){
         yield data;
     }
 

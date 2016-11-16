@@ -40,7 +40,7 @@ class EchoProtocol extends FHRRP {
         yield String(yield this._execute(msg + '\0\0\0\0'));
     }
 
-    *handle(msg){
+    *handle(msg, connection){
         yield 'ECHO: ' + msg;
     }
 
