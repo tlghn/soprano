@@ -23,6 +23,11 @@ class Disposable {
         return res.get(key);
     }
 
+    hasResource(key){
+        let res = this[Symbols.resources];
+        return res && res.has(key);
+    }
+
     setResource(key, value, weak){
         const DisposableMap = require('./DisposableMap');
 
@@ -85,9 +90,9 @@ class Disposable {
             return;
         }
 
-        let {dispose, getResource, setResource, deleteResource, isDisposed, throwIfDisposed} = Disposable.prototype;
+        let {dispose, hasResource, getResource, setResource, deleteResource, isDisposed, throwIfDisposed} = Disposable.prototype;
 
-        Object.assign(target, {dispose, getResource, setResource, deleteResource, isDisposed, throwIfDisposed});
+        Object.assign(target, {dispose, hasResource, getResource, setResource, deleteResource, isDisposed, throwIfDisposed});
 
         target[DISPOSABLE] = true;
     }

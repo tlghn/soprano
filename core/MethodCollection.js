@@ -9,26 +9,24 @@ const Symbols = require('./symbols');
 const awync = require('awync');
 const errors = require('./errors');
 
-class MethodCollection {
-    constructor(){
-        this[Symbols.methods] = new Map();
-    }
+const Disposable = require('./Disposable');
+const DisposableMap = require('./DisposableMap');
 
-    get methods(){
-        return this[Symbols.methods];
+class MethodCollection extends Disposable {
+    constructor(){
+        super();
     }
 
     register(name, generatorFunc){
         if(!awync.isGeneratorFunction(generatorFunc)){
             throw new errors.InvalidArgumentError('generatorFunc is not a generator function');
         }
-        this.methods.set(name, generatorFunc);
+        this.setResource(name, generatorFunc);
         return this.wrap();
     }
 
     *execute(name, args){
-        var methods = this.methods;
-        if(!methods.has(name)){
+        if(!this.hasResource(name)){
             throw new errors.InvalidOperationError('Method not found', {name});
         }
         if(!Array.isArray(args)){
@@ -38,12 +36,16 @@ class MethodCollection {
                 args = [args];
             }
         }
-        let method = methods.get(name);
+        let method = this.getResource(name);
         yield method.apply(null, args);
     }
 
     wrap(){
-        return calp(this.register, this);
+        return calp(this.register, this, Symbols.namespace);
+    }
+    
+    _onDispose(){
+        calp.destroy(this.register, this, Symbols.namespace);
     }
 }
 

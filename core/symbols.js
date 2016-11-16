@@ -30,5 +30,6 @@ module.exports = {
     options: Symbol('options'),
     buffer: Symbol('buffer'),
     ready: Symbol('ready'),
-    inputTransformer: Symbol('inputTransformer')
+    inputTransformer: Symbol('inputTransformer'),
+    namespace: Symbol('namespace')
 };

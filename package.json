@@ -1,6 +1,6 @@
 {
   "name": "soprano",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Abstract Multi-protocol Socket Library for NodeJs",
   "main": "index.js",
   "scripts": {
@@ -22,7 +22,7 @@
   "dependencies": {
     "awync": "^1.2.3",
     "awync-events": "^1.1.4",
-    "calp": "^1.1.1",
+    "calp": "^1.2.0",
     "tupl": "^1.2.0"
   }
 }
