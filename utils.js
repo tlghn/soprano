@@ -71,4 +71,7 @@ class Utils {
     }
 }
 
+Utils.DONE = DONE;
+Utils.NEED_MORE_DATA = NEED_MORE_DATA;
+
 module.exports = Utils;
