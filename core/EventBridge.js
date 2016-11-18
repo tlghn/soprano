@@ -106,7 +106,7 @@ class EventBridge extends Disposable {
                                 }.bind(this, name, args));
                         }
 
-                        if(handler(source, name, args)){
+                        if(handler.call(this, source, name, args)){
                             return;
                         }
                     }

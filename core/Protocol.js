@@ -6,37 +6,64 @@
 const Slave = require('./Slave');
 const errors = require('./errors');
 const Symbols = require('./symbols');
-const awync = require('awync');
 const Disposable = require('./Disposable');
+const stream = require('stream');
+const Stream = stream.Stream;
+const EventBridge = require('./EventBridge');
+const awync = require('awync');
+const FilterFactory = require('./FilterFactory');
 
 class Protocol extends Slave {
 
     constructor(soprano, superClass = void 0){
         super(soprano, superClass || Protocol);
+        this.setResource(Symbols.middlewares, new Set());
     }
 
     /**
      * @param options {*}
      * @param writeHeader {boolean}
+     * @returns {SopranoClient}
      * @protected
      */
     *_connect(options, writeHeader = true){
         let Soprano = require('./Soprano');
         let connection = yield Soprano.connect(this, options);
+        connection.on('reconnected', function (conn) {
+            awync(this.writeHeader.bind(this, conn));
+        }.bind(this, connection));
         if(writeHeader){
             yield this.writeHeader(connection);
         }
         yield connection;
     }
 
+    *_callMiddleWares(){
+        let middleWares = this.getResource(Symbols.middlewares);
+        let args = Array.prototype.slice.call(arguments);
+        args.unshift(void 0);
+
+        for(let middleWare of middleWares){
+            let f = middleWare.bind.apply(middleWare, args);
+            yield f();
+        }
+    }
+
+    /**
+     * @returns {Number}
+     */
     *getMaxHeaderLength(){
         yield 0;
     }
 
+    /**
+     * @returns {Number}
+     */
     *getMinHeaderLength(){
         yield this.getMaxHeaderLength();
     }
 
+    //noinspection JSMethodCanBeStatic
     /**
      * @param connection SopranoClient
      */
@@ -44,13 +71,78 @@ class Protocol extends Slave {
         throw new errors.NotImplementedError();
     }
 
+    use(middleware){
+        if(typeof middleware !== 'function'){
+            throw new errors.InvalidArgumentError('middleware must be a function');
+        }
+        let mw = this.getResource(Symbols.middlewares);
+        mw.add(middleware);
+        return this;
+    }
+
+    unuse(middleware){
+        let mw = this.getResource(Symbols.middlewares);
+        mw.delete(middleware);
+        return this;
+    }
+
+    get middleWares(){
+        return this.getResource(Symbols.middlewares);
+    }
+
+    /**
+     * @returns {FilterFactory|undefined}
+     */
+    get filterFactory(){
+        return this.getResource(Symbols.filterFactory);
+    }
+
+    set filterFactory(/*FilterFactory|undefined*/value){
+        if(typeof value !== 'undefined' && !(value instanceof FilterFactory)){
+            throw new errors.InvalidArgumentError('value must be FilterFactory');
+        }
+        if(value){
+            this.setResource(Symbols.filterFactory, value, true);
+        } else {
+            this.deleteResource(Symbols.filterFactory);
+        }
+    }
+
+    /**
+     * @returns {Array.<Stream>|Stream|undefined}
+     */
     *createOutputFilter(){
+        let factory = this.filterFactory;
+        if(factory){
+            yield factory.createOutputFilter();
+        }
     }
 
+    /**
+     * @returns {Array.<Stream>|Stream|undefined}
+     */
     *createInputFilter(){
+        let factory = this.filterFactory;
+        if(factory){
+            yield factory.createInputFilter();
+        }
     }
 
-    isSopranoFiltersEnabled(){
+    /**
+     * @returns {Stream|undefined}
+     */
+    createInput(){}
+
+    /**
+     * @returns {Stream|undefined}
+     */
+    createOutput(){}
+
+    //noinspection JSMethodCanBeStatic
+    /**
+     * @returns {boolean}
+     */
+    canUseSopranoFilters(){
         return true;
     }
 

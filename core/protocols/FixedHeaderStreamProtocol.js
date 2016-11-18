@@ -1,14 +1,14 @@
 /**
- * Created by tolgahan on 14.11.2016.
+ * Created by tolgahan on 17.11.2016.
  */
 
 "use strict";
-const RRP = require('./RequestResponseProtocol');
+const SP = require('./StreamProtocol');
 const Symbols = require('../symbols');
 const errors = require('../errors');
 const fixedHeaderProtocol = require('../mixins/fixedHeaderProtocol');
 
-class FixedHeaderRequestResponseProtocol extends RRP {
+class FixedHeaderStreamProtocol extends SP {
     /**
      * @param soprano {Soprano}
      * @param header {Buffer}
@@ -19,6 +19,6 @@ class FixedHeaderRequestResponseProtocol extends RRP {
     }
 }
 
-fixedHeaderProtocol(FixedHeaderRequestResponseProtocol);
+fixedHeaderProtocol(FixedHeaderStreamProtocol);
 
-module.exports = FixedHeaderRequestResponseProtocol;
+module.exports = FixedHeaderStreamProtocol;

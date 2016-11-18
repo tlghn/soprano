@@ -27,8 +27,8 @@ class SopranoServer extends Slave {
         switch (name){
             case 'connection':
                 yield awync.captureErrors;
+                let client = args[0];
                 try{
-                    let client = args[0];
                     client.pause();
 
                     let protocols = this.soprano.protocols;
@@ -68,15 +68,14 @@ class SopranoServer extends Slave {
                         }
                     }
 
-                    let sopranoClient = SopranoClient.create(protocol, client);
-                    protocol.handover(sopranoClient);
+                    let sopranoClient = SopranoClient.create(protocol, client, true);
+                    sopranoClient.server = this;
+                    yield protocol.handover(sopranoClient);
 
                 } catch (err){
                     yield awync()(client.write, client)(err.constructor.name + ':' + err.message);
                     client.dispose();
                 }
-
-
 
                 break;
         }

@@ -4,31 +4,7 @@
 
 "use strict";
 const FHRRP = require('./FixedHeaderRequestResponseProtocol');
-
-const stream = require('stream');
-const ZEROS = Buffer.alloc(4);
-
-class MessageTransformer extends stream.Transform {
-    constructor(){
-        super();
-    }
-
-    _transform(chunk, enc, cb){
-        if(!this.buffer){
-            this.buffer = chunk;
-        } else {
-            this.buffer = Buffer.concat([this.buffer, chunk]);
-        }
-
-        let buffer = this.buffer;
-        if(buffer.lastIndexOf(ZEROS) === buffer.length - ZEROS.length){
-            delete this.buffer;
-            cb(null, buffer);
-        } else {
-            cb();
-        }
-    }
-}
+const LengthPrefixedTransformer = require('../transformers/LengthPrefixedTransformer');
 
 class EchoProtocol extends FHRRP {
 
@@ -37,7 +13,7 @@ class EchoProtocol extends FHRRP {
     }
 
     *echo(msg){
-        yield String(yield this._execute(msg + '\0\0\0\0'));
+        yield String(yield this._execute(msg));
     }
 
     *handle(msg, connection){
@@ -45,7 +21,11 @@ class EchoProtocol extends FHRRP {
     }
 
     createInput(){
-        return new MessageTransformer();
+        return new LengthPrefixedTransformer(true);
+    }
+
+    createOutput() {
+        return new LengthPrefixedTransformer(false);
     }
 }
 

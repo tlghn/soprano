@@ -4,31 +4,41 @@
 "use strict";
 
 const Protocol = require('./../Protocol');
-const errors = require('./../errors');
-const stream = require('stream');
-const Stream = stream.Stream;
-const Disposable = require('./../Disposable');
 const awync = require('awync');
 const SopranoClient = require('../SopranoClient');
 
 class RequestResponseProtocol extends Protocol {
 
+    /**
+     * @param soprano {Soprano}
+     */
     constructor(soprano){
         super(soprano, RequestResponseProtocol);
     }
 
+    /**
+     * @param data {*}
+     * @param options {*|undefined}
+     * @returns {*}
+     * @private
+     */
     *_execute(data, options = void 0){
         let connection = yield this._connect(options);
 
         let output = yield connection.createOutput(this.createOutput());
         yield output.end(data);
+        yield output.release();
 
         let input = yield connection.createInput(this.createInput());
         let result = yield input.whichever('error', 'data');
+        yield input.release();
 
         yield result.args[0];
     }
 
+    /**
+     * @param connection {SopranoClient}
+     */
     handover(connection){
 
         awync(function *(connection) {
@@ -36,11 +46,13 @@ class RequestResponseProtocol extends Protocol {
                 let input = yield connection.createInput(this.createInput());
 
                 let event = yield input.whichever('error', 'data');
+                yield input.release();
                 let result = event.args[0];
                 result = yield this.handle(result, connection);
 
                 let output = yield connection.createOutput(this.createOutput());
                 yield output.end(result);
+                yield output.release();
                 yield awync.sleep();
                 
             } catch (err){
@@ -52,23 +64,14 @@ class RequestResponseProtocol extends Protocol {
         }.bind(this, connection));
     }
 
-    *handle(data, connection){
+    /**
+     * @param data {*}
+     * @param sopranoClient {SopranoClient}
+     * @returns {*}
+     */
+    *handle(data, sopranoClient){
         yield data;
     }
-
-    /**
-     * @returns Stream
-     */
-    createInput(){
-    }
-
-    /**
-     * @returns Stream
-     */
-    createOutput(){
-    }
-
-
 }
 
 module.exports = RequestResponseProtocol;

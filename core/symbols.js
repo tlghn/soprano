@@ -28,8 +28,17 @@ module.exports = {
     outputFilter: Symbol('outputFilter'),
     inputFilter: Symbol('inputFilter'),
     options: Symbol('options'),
+    initialOptions: Symbol('initialOptions'),
     buffer: Symbol('buffer'),
     ready: Symbol('ready'),
     inputTransformer: Symbol('inputTransformer'),
-    namespace: Symbol('namespace')
+    namespace: Symbol('namespace'),
+    adapter: Symbol('adapter'),
+    id: Symbol('id'),
+    ids: Symbol('ids'),
+    count: Symbol('count'),
+    connected: Symbol('connected'),
+    server: Symbol('server'),
+    header: Symbol('header'),
+    middlewares: Symbol('middlewares')
 };

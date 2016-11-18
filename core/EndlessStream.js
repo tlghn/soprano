@@ -8,7 +8,12 @@ const stream = require('stream');
 class EndlessStream extends stream.PassThrough {
     end(chunk, encoding, callback){
         if(chunk){
-            return this.write(chunk, encoding, callback);
+            return this.write(chunk, encoding, (err)=>{
+                if(err) {
+                    return callback(err);
+                }
+                callback();
+            });
         }
 
         if(typeof encoding === 'function'){

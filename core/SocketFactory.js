@@ -178,7 +178,11 @@ class Client extends stream.Duplex {
     }
 
     _onDispose(){
-        throw new errors.NotImplementedError();
+        super.end();
+    }
+
+    _read(){
+        return null;
     }
 }
 
@@ -353,8 +357,11 @@ class NetClient extends Client {
     }
 
     read(size = void 0){
-        this.throwIfDisposed();
-        return this.base.read(size);
+        if(this.isDisposed()){
+            return super.read(size);
+        } else {
+            return this.base.read(size);
+        }
     }
 
     ref(){
@@ -448,6 +455,7 @@ class NetClient extends Client {
         if(base){
             base.destroy();
         }
+        super._onDispose();
     }
 
     get eventNames(){
