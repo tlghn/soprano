@@ -60,7 +60,7 @@ class RequestResponseProtocol extends Protocol {
                     yield awync.captureErrors;
                     let middleWares = this.middleWares;
                     for(let middleWare of middleWares){
-                        result = yield middleWare(result);
+                        result = yield middleWare(result, connection);
                     }
                     result = yield this.handle(null, result, connection);
                     yield awync.releaseErrors;
