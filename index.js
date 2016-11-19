@@ -15,6 +15,7 @@ Soprano.EventBridge = require('./core/EventBridge');
 
 Soprano.errors = require('./core/errors');
 Soprano.Symbols = require('./core/symbols');
+Soprano.debug = require('./core/debug');
 
 Soprano.SocketFactory = require('./core/SocketFactory');
 Soprano.FilterFactory = require('./core/FilterFactory');
