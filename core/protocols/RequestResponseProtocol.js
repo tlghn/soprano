@@ -23,6 +23,12 @@ class RequestResponseProtocol extends Protocol {
      * @private
      */
     *_execute(data, options = void 0){
+
+        let middleWares = this.middleWares;
+        for(let middleWare of middleWares){
+            data = yield middleWare(data);
+        }
+
         let connection = yield this._connect(options);
 
         let output = yield connection.createOutput(this.createOutput());
@@ -48,7 +54,19 @@ class RequestResponseProtocol extends Protocol {
                 let event = yield input.whichever('error', 'data');
                 yield input.release();
                 let result = event.args[0];
-                result = yield this.handle(result, connection);
+
+
+                try{
+                    yield awync.captureErrors;
+                    let middleWares = this.middleWares;
+                    for(let middleWare of middleWares){
+                        result = yield middleWare(result);
+                    }
+                    result = yield this.handle(null, result, connection);
+                    yield awync.releaseErrors;
+                } catch (err){
+                    result = yield this.handle(err, result, connection);
+                }
 
                 let output = yield connection.createOutput(this.createOutput());
                 yield output.end(result);
@@ -65,12 +83,13 @@ class RequestResponseProtocol extends Protocol {
     }
 
     /**
+     * @param err;
      * @param data {*}
      * @param sopranoClient {SopranoClient}
      * @returns {*}
      */
-    *handle(data, sopranoClient){
-        yield data;
+    *handle(err, data, sopranoClient){
+        yield err || data;
     }
 }
 

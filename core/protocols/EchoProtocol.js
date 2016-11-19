@@ -16,8 +16,12 @@ class EchoProtocol extends FHRRP {
         yield String(yield this._execute(msg));
     }
 
-    *handle(msg, connection){
-        yield 'ECHO: ' + msg;
+    *handle(err, msg, connection){
+        if(err) {
+            yield err;
+        } else {
+            yield 'ECHO: ' + msg;
+        }
     }
 
     createInput(){
