@@ -13,94 +13,179 @@ const errors = require('./errors');
 const stream = require('stream');
 const Stream = stream.Stream;
 const Disposable = require('./Disposable');
-const EventEmitter = require('awync-events');
 const awync = require('awync');
-const EndlessStream = require('./EndlessStream');
-const EE = require('events');
-const debug = require('./debug');
+const debug = require('./debug')();
 
-class Reader extends stream.PassThrough {
-    constructor(client){
-        super();
-        this._handleData = this._handleData.bind(this);
-        this._handleError = this._handleError.bind(this);
-        this._handleDisposed = this._handleDisposed.bind(this);
-        this.setResource(Symbols.target, client, true);
-        client.on('error', this._handleError)
-            .on('disposed', this._handleDisposed)
-            .on('data', this._handleData)
-            .on('close', this._handleDisposed);
+class Writer {
 
+    constructor(outputs, net){
+        outputs.forEach(function (stream) {
+            stream.pause();
+        });
+        this._outputs = outputs;
+        this._net = net;
     }
 
-    get _target(){
-        return this.getResource(Symbols.target);
+    *write(data, encoding){
+        yield new Promise((resolve, reject) => {
+            (this._outputs[0] || this._net).write(data, encoding, function (err) {
+                if(err) return reject(err);
+                return resolve();
+            })
+        });
     }
 
-    _handleError(err){
-        this.emit('error', err);
+    *_transfer(from, to){
+        yield new Promise((resolve, reject) => {
+
+            function onReadable() {
+                function readNext(err) {
+                    if(err){
+                        return reject(err);
+                    }
+                    var chunk = from.read();
+                    if(chunk === null){
+                        var rs = from._readableState;
+                        if(rs && rs.objectMode){
+                            return to.write(chunk, function (err) {
+
+                                if(err) {
+                                    return readNext(err);
+                                }
+
+                                if(rs.ended) {
+                                    if(!rs.endEmitted){
+                                        return from.end();
+                                    }
+                                    return;
+                                }
+
+                                readNext();
+                            });
+                        } else {
+                            return from.end();
+                        }
+                    }
+                    to.write(chunk, readNext);
+                }
+
+                readNext();
+            }
+
+            function onEnd(err) {
+                from.removeListener('readable', onReadable);
+                from.removeListener('end', onEnd);
+                from.removeListener('error', onEnd);
+                to.removeListener('error', onEnd);
+                if(err instanceof Error) return reject(err);
+                resolve(err);
+            }
+
+            if(typeof from.flush === 'function'){
+                from.flush();
+            }
+            from.on('readable', onReadable);
+            from.on('end', onEnd);
+            from.on('error', onEnd);
+            to.on('error', onEnd);
+        });
     }
 
-    _handleDisposed() {
-        this.dispose();
+    *end(data, encoding){
+        if(data){
+            yield this.write(data, encoding);
+        }
+        var current = this._outputs.shift();
+        while (current){
+            var next = this._outputs.shift();
+            yield this._transfer(current, next || this._net);
+            current = next;
+        }
+
+        delete this._outputs;
+        delete this._net;
     }
 
-    _handleData(data) {
-        this._target.pause();
-        this.write(data, function () {
-            this._target.resume();
-        }.bind(this))
-    }
-
-    dispose(){
-        console.log('dispose');
-        super.dispose();
-    }
-
-    _onDispose(){
-        this._target.removeListener('error', this._handleError)
-            .removeListener('disposed', this._handleDisposed)
-            .removeListener('data', this._handleData)
-            .removeListener('close', this._handleDisposed);
-    }
 }
 
-class Writer extends stream.PassThrough {
-    constructor(client){
-        super();
-        this._handleError = this._handleError.bind(this);
-        this._handleDisposed = this._handleDisposed.bind(this);
-        this.setResource(Symbols.target, client, true);
-        client.on('error', this._handleError)
-            .on('disposed', this._handleDisposed)
-            .on('close', this._handleDisposed);
+class Reader {
+    constructor(net, inputs){
+        net.pause();
+        this._net = net;
+        this._inputs = inputs;
+
+        net.pause();
+        inputs.forEach(input => input.pause());
     }
 
-    get _target(){
-        return this.getResource(Symbols.target);
+    *read(){
+        yield new Promise((resolve, reject) => {
+
+            var net = this._net;
+            var inputs = this._inputs;
+
+            inputs.forEach(input => {
+                input.on('error', onResult);
+            });
+
+            net.on('error', onResult);
+            net.on('readable', onReadable);
+            
+            function transform(value, copy) {
+                if(!copy.length){
+                    return onResult(value);
+                }
+                var current = copy.shift();
+                current.write(value, function (err) {
+                    if(err){
+                        return onResult(err);
+                    }
+                    var value = current.read();
+                    if(value === null){
+                        var rs = current._readableState;
+                        if(rs && rs.objectMode && rs.ended){
+                            return transform(null, copy);
+                        }
+                        return onReadable();
+                    }
+                    transform(value, copy);
+                });
+            }
+
+            function onReadable() {
+                net.removeListener('readable', onReadable);
+                var chunk = net.read();
+                if(chunk === null) {
+                    net.on('readable', onReadable);
+                    return;
+                }
+
+                transform(chunk, inputs.slice());
+            }
+
+            function onResult(data){
+
+                inputs.forEach(input => input.removeListener('error', onResult));
+                net.removeListener('error', onResult);
+                net.removeListener('readable', onReadable);
+
+                if(data instanceof Error){
+                    return reject(data);
+                }
+
+                resolve(data);
+            }
+
+
+        });
     }
 
-    _handleError(err){
-        this.emit('error', err);
-    }
-
-    _handleDisposed() {
-        this.dispose();
-    }
-
-    _onDispose(){
-        this._target.removeListener('error', this._handleError)
-            .removeListener('disposed', this._handleDisposed)
-            .removeListener('close', this._handleDisposed);
-    }
-
-    write(data, encoding, cb){
-        return this._target.write(data, encoding, cb);
+    *release(){
+        this._net.resume();
+        delete this._net;
+        delete this._inputs;
     }
 }
-
-Disposable.attach(Reader);
-Disposable.attach(Writer);
 
 class SopranoClient extends Slave {
 
@@ -330,20 +415,7 @@ class SopranoClient extends Slave {
             inputs.unshift.apply(inputs, filters);
         }
 
-        let reader = new Reader(net);
-
-        inputs.unshift(reader);
-
-        inputs = inputs.filter(x=>x instanceof Stream);
-
-        let result = yield SopranoClient.pipeStreams.apply(null, inputs);
-        result.release = function *() {
-            reader.dispose();
-            yield true;
-        }.bind(result);
-
-        yield result;
-        this.net.resume();
+        yield new Reader(net, inputs.filter(x=>x instanceof Stream));
     }
 
     *createOutput(){
@@ -367,20 +439,9 @@ class SopranoClient extends Slave {
             outputs.push.apply(outputs, filters);
         }
 
-        outputs.push(
-            new Writer(net)
-        );
-
         outputs = outputs.filter(x => x instanceof Stream);
 
-        let first = outputs[0];
-        first.release = function *() {
-            first.dispose();
-            yield true;
-        }.bind(first);
-
-        SopranoClient.pipeStreams.apply(null, outputs);
-        yield awync()(first, null, true);
+        yield new Writer(outputs, net);
     }
 
     *end(){
@@ -426,42 +487,6 @@ class SopranoClient extends Slave {
      */
     static create(protocol, net, connected = false){
         return new SopranoClient(protocol)._init(net, connected);
-    }
-
-    static pipeStreams(source, dest){
-        
-        if(arguments.length > 2){
-            let prev = SopranoClient.pipeStreams(arguments[0], arguments[1]);
-            for(var i=2; i<arguments.length; i++){
-                prev = SopranoClient.pipeStreams(prev, arguments[i]);
-            }
-            return prev;
-        }
-
-        if(source){
-            Disposable.attach(source);
-            EventEmitter.attach(source);
-        }
-
-        if(dest){
-            Disposable.attach(dest);
-            EventEmitter.attach(dest);
-        }
-
-        if(!source || !dest){
-            return source || dest;
-        }
-
-
-        var listeners = {
-            error: dest.emit.bind(dest, 'error'),
-            disposed: dest.dispose.bind(dest)
-        };
-
-        Object.keys(listeners).forEach(key => source.on(key, listeners[key]));
-
-        source.pipe(dest);
-        return dest;
     }
 }
 

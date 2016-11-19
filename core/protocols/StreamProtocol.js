@@ -10,6 +10,7 @@ const Symbols = require('../symbols');
 const Adapter = require('../Adapter');
 const MemoryAdapter = require('../adapters/MemoryAdapter');
 const Controller = require('../Controller');
+const debug = require('../debug')();
 
 class StreamProtocol extends Protocol {
 
@@ -38,6 +39,7 @@ class StreamProtocol extends Protocol {
      * @protected
      */
     *_execute(options = void 0){
+        debug('%s >> initialize request', this.constructor.name);
         let connection = yield this._connect(options);
         yield this.createClientController(connection);
     }
@@ -47,6 +49,7 @@ class StreamProtocol extends Protocol {
      * @returns {Controller}
      */
     *handover(connection){
+        debug('%s >> connection accepted from %s:%s', this.constructor.name, connection.remoteAddress, connection.remotePort);
         let controller = yield this.createServerController(connection);
         yield this.adapter.add(controller);
     }

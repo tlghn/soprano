@@ -12,6 +12,7 @@ const Stream = stream.Stream;
 const EventBridge = require('./EventBridge');
 const awync = require('awync');
 const FilterFactory = require('./FilterFactory');
+const debug = require('./debug')();
 
 class Protocol extends Slave {
 
@@ -35,6 +36,7 @@ class Protocol extends Slave {
         if(writeHeader){
             yield this.writeHeader(connection);
         }
+        debug('%s >> client ready on %s:%s', this.constructor.name, connection.remoteAddress, connection.remotePort);
         yield connection;
     }
 

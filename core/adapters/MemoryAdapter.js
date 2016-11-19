@@ -15,6 +15,7 @@ const awync = require('awync');
 const SOPRANO_MEMORY_ADAPTER = 'SopranoMemoryAdapter';
 const IdClass = require('../Id');
 const ID = new IdClass();
+const debug = require('../debug')();
 
 class MemoryAdapter extends Adapter {
 

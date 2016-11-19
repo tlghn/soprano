@@ -5,6 +5,7 @@
 "use strict";
 const FHRRP = require('./FixedHeaderRequestResponseProtocol');
 const LengthPrefixedTransformer = require('../transformers/LengthPrefixedTransformer');
+const debug = require('../debug')();
 
 class EchoProtocol extends FHRRP {
 
@@ -13,13 +14,16 @@ class EchoProtocol extends FHRRP {
     }
 
     *echo(msg){
+        debug('Sending %s', msg);
         yield String(yield this._execute(msg));
     }
 
     *handle(err, msg, connection){
         if(err) {
+            debug('Receive failed with %s', err);
             yield err;
         } else {
+            debug('Received:%s', msg);
             yield 'ECHO: ' + msg;
         }
     }

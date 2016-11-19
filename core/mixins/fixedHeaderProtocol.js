@@ -7,6 +7,7 @@
 const Symbols = require('../symbols');
 const errors = require('../errors');
 const FIXED_HEADER_PROTOCOL = Symbol('fixedHeaderProtocol');
+const debug = require('../debug')();
 
 class FixedHeaderProtocolMixin {
 
@@ -61,6 +62,8 @@ module.exports = function (target) {
     delete props.constructor;
 
     Object.assign(target, props);
+
+    debug('FixedHeaderProtocolMixin mixin is applied on %s', target.constructor.name);
 
     return target[FIXED_HEADER_PROTOCOL] = true;
 };

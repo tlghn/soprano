@@ -6,6 +6,7 @@
 const Protocol = require('./../Protocol');
 const awync = require('awync');
 const SopranoClient = require('../SopranoClient');
+const debug = require('../debug')();
 
 class RequestResponseProtocol extends Protocol {
 
@@ -24,6 +25,8 @@ class RequestResponseProtocol extends Protocol {
      */
     *_execute(data, options = void 0){
 
+        debug('%s >> initialize request', this.constructor.name);
+
         let middleWares = this.middleWares;
         for(let middleWare of middleWares){
             data = yield middleWare(data);
@@ -33,13 +36,15 @@ class RequestResponseProtocol extends Protocol {
 
         let output = yield connection.createOutput(this.createOutput());
         yield output.end(data);
-        yield output.release();
+
+        debug('%s >> request sent to %s:%s', this.constructor.name, connection.remoteAddress, connection.remotePort);
 
         let input = yield connection.createInput(this.createInput());
-        let result = yield input.whichever('error', 'data');
+        let value = yield input.read();
         yield input.release();
 
-        yield result.args[0];
+        debug('%s >> reply received from %s:%s', this.constructor.name, connection.remoteAddress, connection.remotePort);
+        yield value;
     }
 
     /**
@@ -48,13 +53,14 @@ class RequestResponseProtocol extends Protocol {
     handover(connection){
 
         awync(function *(connection) {
+            let ip = connection.remoteAddress;
+            let port = connection.remotePort;
+            debug('%s >> connection accepted from %s:%s', this.constructor.name, ip, port);
             try{
                 let input = yield connection.createInput(this.createInput());
-
-                let event = yield input.whichever('error', 'data');
+                let result = yield input.read();
                 yield input.release();
-                let result = event.args[0];
-
+                debug('%s >> request received from %s:%s', this.constructor.name, ip, port);
 
                 try{
                     yield awync.captureErrors;
@@ -70,15 +76,14 @@ class RequestResponseProtocol extends Protocol {
 
                 let output = yield connection.createOutput(this.createOutput());
                 yield output.end(result);
-                yield output.release();
-                yield awync.sleep();
-                
+                debug('%s >> reply sent to %s:%s', this.constructor.name, ip, port);
+
             } catch (err){
-                console.log(err);
+                debug('%s >> %s %s:%s', this.constructor.name, err, ip, port);
             } finally {
                 yield connection.end();
+                debug('%s >> disconnected from %s:%s', this.constructor.name, ip, port);
             }
-
         }.bind(this, connection));
     }
 
