@@ -34,6 +34,9 @@ Soprano.Id = require('./core/Id');
 Soprano.Adapter = require('./core/Adapter');
 Soprano.MemoryAdapter = require('./core/adapters/MemoryAdapter');
 
+Soprano.Writer = require('./core/Writer');
+Soprano.Reader = require('./core/Reader');
+
 Soprano.LengthPrefixedTransformer = require('./core/transformers/LengthPrefixedTransformer');
 Soprano.JSONTransformer = require('./core/transformers/JSONTransformer');
 

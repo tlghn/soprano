@@ -13,6 +13,7 @@ const EventBridge = require('./EventBridge');
 const FLAG_READ = 1;
 const FLAG_WRITE = 2;
 const awync = require('awync');
+const debug = require('./debug')();
 
 class Controller extends EventEmitter {
     /**
@@ -45,12 +46,8 @@ class Controller extends EventEmitter {
             while (this.connected){
                 let input = yield this.client.createInput(this.protocol.createInput());
                 try{
-                    let event = yield input.whichever('error', 'disposed', 'data');
-                    yield input.release();
-                    if(event.name === 'disposed'){
-                        break;
-                    }
-                    let data = event.args[0];
+                    let data = yield input.read();
+                    debug('%s:Controller >>> Received data from %s:%s', this.protocol.constructor.name, this.remoteAddress, this.remotePort);
 
                     if(this.client.server){
                         let middleWares = this.protocol.middleWares;
@@ -65,9 +62,11 @@ class Controller extends EventEmitter {
                     }
 
                     yield this._handle(null, data);
+                    debug('%s:Controller >>> Incoming data processed for %s:%s', this.protocol.constructor.name, this.remoteAddress, this.remotePort);
+
                 } catch (err){
                     if(this.connected){
-                        console.error(err);
+                        debug('%s:Controller >>> Error occurs while reading from %s:%s', this.protocol.constructor.name, this.remoteAddress, this.remotePort);
                     } else {
                         break;
                     }
@@ -96,12 +95,12 @@ class Controller extends EventEmitter {
 
                     let output = yield this.client.createOutput(this.protocol.createOutput());
                     yield output.end(data);
-                    yield output.release();
+                    debug('%s:Controller >>> Sent data to %s:%s', this.protocol.constructor.name, this.remoteAddress, this.remotePort);
                     this.setResource(Symbols.ready, true);
                     this._deque();
                 } catch (err) {
                     if(this.connected){
-                        console.log(err);
+                        debug('%s:Controller >>> Error occurs while writing to %s:%s', this.protocol.constructor.name, this.remoteAddress, this.remotePort);
                     } else {
                         break;
                     }
