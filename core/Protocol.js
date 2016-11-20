@@ -13,6 +13,8 @@ const EventBridge = require('./EventBridge');
 const awync = require('awync');
 const FilterFactory = require('./FilterFactory');
 const debug = require('./debug')();
+const Reader = require('./Reader');
+const Writer = require('./Writer');
 
 class Protocol extends Slave {
 
@@ -131,14 +133,19 @@ class Protocol extends Slave {
     }
 
     /**
+     * @param sopranoClient {SopranoClient|undefined}
+     * @param data {*}
      * @returns {Stream|undefined}
      */
-    createInput(){}
+    createInput(sopranoClient = void 0, data = void 0){}
 
     /**
+     * @param sopranoClient {SopranoClient|undefined}
+     * @param data {*}
      * @returns {Stream|undefined}
      */
-    createOutput(){}
+    createOutput(sopranoClient = void 0, data = void 0){}
+
 
     //noinspection JSMethodCanBeStatic
     /**
@@ -170,15 +177,15 @@ class Protocol extends Slave {
     }
 
     /**
-     * @param connection SopranoClient
+     * @param connection {SopranoClient}
+     * @param header {Buffer}
      */
-    handover(connection) {
+    handover(connection, header) {
         throw new errors.NotImplementedError();
     }
 }
 
 
 Disposable.attach(Protocol);
-
 
 module.exports = Protocol;

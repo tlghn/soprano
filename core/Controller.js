@@ -44,7 +44,7 @@ class Controller extends EventEmitter {
         this.canRead && this.connected &&
         awync(function *() {
             while (this.connected){
-                let input = yield this.client.createInput(this.protocol.createInput());
+                let input = yield this.client.createInput(this.protocol.createInput(this.client, this.header));
                 try{
                     let data = yield input.read();
                     debug('%s:Controller >>> Received data from %s:%s', this.protocol.constructor.name, this.remoteAddress, this.remotePort);
@@ -93,7 +93,7 @@ class Controller extends EventEmitter {
                         }
                     }
 
-                    let output = yield this.client.createOutput(this.protocol.createOutput());
+                    let output = yield this.client.createOutput(this.protocol.createOutput(this.client, this.header));
                     yield output.end(data);
                     debug('%s:Controller >>> Sent data to %s:%s', this.protocol.constructor.name, this.remoteAddress, this.remotePort);
                     this.setResource(Symbols.ready, true);
@@ -107,6 +107,14 @@ class Controller extends EventEmitter {
                 }
             }
         }.bind(this));
+    }
+
+    get header(){
+        return this.getResource(Symbols.header);
+    }
+
+    set header(value){
+        this.setResource(Symbols.header, value);
     }
 
     /**

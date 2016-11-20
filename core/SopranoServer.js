@@ -15,6 +15,7 @@ const stream = require('stream');
 const Disposable = require('./Disposable');
 const EventEmitter = require('awync-events');
 const awync = require('awync');
+const Reader = require('./Reader');
 
 class SopranoServer extends Slave {
 
@@ -28,9 +29,10 @@ class SopranoServer extends Slave {
             case 'connection':
                 yield awync.captureErrors;
                 let client = args[0];
-                try{
-                    client.pause();
+                client.setNoDelay(true);
 
+                try{
+                    let reader = new Reader(client);
                     let protocols = this.soprano.protocols;
     
                     let minHeaderLength = yield protocols.getMinHeaderLength();
@@ -41,36 +43,35 @@ class SopranoServer extends Slave {
                     let protocol = null;
     
                     while (!protocol){
-                        yield client.whichever('error', 'readable');
-                        var chunk;
-                        while (null !== (chunk = client.read(minHeaderLength))){
-    
-                            if(headerPos > maxHeaderLength){
-                                headerBytes = Buffer.concat([headerBytes, chunk]);
-                            } else {
-                                chunk.copy(headerBytes, headerPos);
-                                headerPos += chunk.length;
-                                minHeaderLength = 1;
-                            }
-    
-                            let matchResult = yield protocols.matchHeader(headerBytes, 0, headerPos);
-                            if(matchResult === false){
-                                continue;
-                            }
-    
-                            if(matchResult instanceof Protocol){
-                                protocol = matchResult;
-                                break;
-                            }
-    
-                            //noinspection ExceptionCaughtLocallyJS
-                            throw new errors.InvalidProtocolError('INVALID_PROTOCOL');
+                        let chunk = yield reader.read(minHeaderLength);
+
+                        if(headerPos > maxHeaderLength){
+                            headerBytes = Buffer.concat([headerBytes, chunk]);
+                        } else {
+                            chunk.copy(headerBytes, headerPos);
+                            headerPos += chunk.length;
+                            minHeaderLength = 1;
                         }
+
+                        let matchResult = yield protocols.matchHeader(headerBytes, 0, headerPos);
+                        if(matchResult === false){
+                            continue;
+                        }
+
+                        if(matchResult instanceof Protocol){
+                            protocol = matchResult;
+                            break;
+                        }
+
+                        //noinspection ExceptionCaughtLocallyJS
+                        throw new errors.InvalidProtocolError('INVALID_PROTOCOL');
                     }
 
                     let sopranoClient = SopranoClient.create(protocol, client, true);
                     sopranoClient.server = this;
-                    yield protocol.handover(sopranoClient);
+                    yield protocol.handover(sopranoClient, headerBytes.slice(0, headerPos));
+
+                    yield reader.release(false);
 
                 } catch (err){
                     yield awync()(client.write, client)(err.constructor.name + ':' + err.message);

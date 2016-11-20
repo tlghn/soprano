@@ -19,11 +19,13 @@ class RequestResponseProtocol extends Protocol {
 
     /**
      * @param data {*}
-     * @param options {*|undefined}
+     * @param options {*}
+     * @param writeHeader {boolean}
+     * @param requestOptions {*}
      * @returns {*}
      * @private
      */
-    *_execute(data, options = void 0){
+    *_execute(data, options = void 0, writeHeader = true, requestOptions = void 0){
 
         debug('%s >> initialize request', this.constructor.name);
 
@@ -32,14 +34,15 @@ class RequestResponseProtocol extends Protocol {
             data = yield middleWare(data);
         }
 
-        let connection = yield this._connect(options);
+        let connection = yield this._connect(options, writeHeader);
 
-        let output = yield connection.createOutput(this.createOutput());
+        let request = this.createOutput(connection, requestOptions);
+        let output = yield connection.createOutput(request);
         yield output.end(data);
 
         debug('%s >> request sent to %s:%s', this.constructor.name, connection.remoteAddress, connection.remotePort);
 
-        let input = yield connection.createInput(this.createInput());
+        let input = yield connection.createInput(this.createInput(connection, request));
         let value = yield input.read();
         yield input.release();
 
@@ -49,32 +52,33 @@ class RequestResponseProtocol extends Protocol {
 
     /**
      * @param connection {SopranoClient}
+     * @param header {Buffer}
      */
-    handover(connection){
+    handover(connection, header){
 
-        awync(function *(connection) {
+        awync(function *(connection, header) {
+            yield awync.captureErrors;
             let ip = connection.remoteAddress;
             let port = connection.remotePort;
             debug('%s >> connection accepted from %s:%s', this.constructor.name, ip, port);
             try{
-                let input = yield connection.createInput(this.createInput());
+                let request = this.createInput(connection, header);
+                let input = yield connection.createInput(request);
                 let result = yield input.read();
                 yield input.release();
                 debug('%s >> request received from %s:%s', this.constructor.name, ip, port);
 
                 try{
-                    yield awync.captureErrors;
                     let middleWares = this.middleWares;
                     for(let middleWare of middleWares){
                         result = yield middleWare(result, connection);
                     }
                     result = yield this.handle(null, result, connection);
-                    yield awync.releaseErrors;
                 } catch (err){
                     result = yield this.handle(err, result, connection);
                 }
 
-                let output = yield connection.createOutput(this.createOutput());
+                let output = yield connection.createOutput(this.createOutput(connection, request));
                 yield output.end(result);
                 debug('%s >> reply sent to %s:%s', this.constructor.name, ip, port);
 
@@ -84,9 +88,10 @@ class RequestResponseProtocol extends Protocol {
                 yield connection.end();
                 debug('%s >> disconnected from %s:%s', this.constructor.name, ip, port);
             }
-        }.bind(this, connection));
+        }.bind(this, connection, header));
     }
 
+    //noinspection JSMethodCanBeStatic
     /**
      * @param err;
      * @param data {*}

@@ -54,6 +54,7 @@ class SopranoClient extends Slave {
         if(!(net instanceof Client)){
             throw new errors.InvalidArgumentError('net must be instance of Client');
         }
+        net.setNoDelay(true);
 
         this.setResource(Symbols.net, net);
         this.setResource(

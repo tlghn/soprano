@@ -6,8 +6,9 @@
 
 
 class Reader {
-    constructor(net, inputs){
+    constructor(net, inputs = void 0){
         net.pause();
+        if(!inputs) inputs = [];
         this._net = net;
         this._inputs = inputs;
 
@@ -15,18 +16,14 @@ class Reader {
         inputs.forEach(input => input.pause());
     }
 
-    *read(){
+    *read(chunkSize = 0){
+        if(isNaN(chunkSize)) {
+            chunkSize = 0;
+        }
+
+        chunkSize = chunkSize > 0 ? [chunkSize] : [];
+
         yield new Promise((resolve, reject) => {
-
-            var net = this._net;
-            var inputs = this._inputs;
-
-            inputs.forEach(input => {
-                input.on('error', onResult);
-            });
-
-            net.on('error', onResult);
-            net.on('readable', onReadable);
 
             function transform(value, copy) {
                 if(!copy.length){
@@ -51,7 +48,7 @@ class Reader {
 
             function onReadable() {
                 net.removeListener('readable', onReadable);
-                var chunk = net.read();
+                var chunk = net.read.apply(net, chunkSize);
                 if(chunk === null) {
                     net.on('readable', onReadable);
                     return;
@@ -73,12 +70,22 @@ class Reader {
                 resolve(data);
             }
 
+            var net = this._net;
+            var inputs = this._inputs;
 
+            inputs.forEach(input => {
+                input.on('error', onResult);
+            });
+
+            net.on('error', onResult);
+            onReadable();
         });
     }
 
-    *release(){
-        this._net.resume();
+    *release(willResume = true){
+        if(willResume || (typeof willResume === 'undefined')){
+            this._net.resume();
+        }
         delete this._net;
         delete this._inputs;
     }

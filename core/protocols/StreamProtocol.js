@@ -34,23 +34,28 @@ class StreamProtocol extends Protocol {
     }
 
     /**
-     * @param options
+     * @param options {*}
+     * @param header {*}
      * @returns {Controller}
      * @protected
      */
-    *_execute(options = void 0){
+    *_execute(options = void 0, header = void 0){
         debug('%s >> initialize request', this.constructor.name);
         let connection = yield this._connect(options);
-        yield this.createClientController(connection);
+        let controller = yield this.createClientController(connection);
+        controller.header = header;
+        yield controller;
     }
 
     /**
      * @param connection {SopranoClient}
+     * @param header {Buffer}
      * @returns {Controller}
      */
-    *handover(connection){
+    *handover(connection, header){
         debug('%s >> connection accepted from %s:%s', this.constructor.name, connection.remoteAddress, connection.remotePort);
         let controller = yield this.createServerController(connection);
+        controller.header = header;
         yield this.adapter.add(controller);
     }
 

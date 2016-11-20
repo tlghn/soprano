@@ -4,54 +4,124 @@
 const Soprano = require('./core/Soprano');
 const awync = require('awync');
 
-Soprano.MethodCollection = require('./core/MethodCollection');
-Soprano.ProtocolCollection = require('./core/ProtocolCollection');
-Soprano.Slave = require('./core/Slave');
-Soprano.Disposable = require('./core/Disposable');
-Soprano.DisposableMap = require('./core/DisposableMap');
-Soprano.DisposableSet = require('./core/DisposableSet');
-Soprano.EndlessStream = require('./core/EndlessStream');
-Soprano.EventBridge = require('./core/EventBridge');
+const EventEmitter = require('awync-events');
+Soprano.EventEmitter = EventEmitter;
 
-Soprano.errors = require('./core/errors');
-Soprano.Symbols = require('./core/symbols');
-Soprano.debug = require('./core/debug');
+const SopranoClient = require('./core/SopranoClient');
+Soprano.SopranoClient = SopranoClient;
 
-Soprano.SocketFactory = require('./core/SocketFactory');
-Soprano.FilterFactory = require('./core/FilterFactory');
+const SopranoServer = require('./core/SopranoServer');
+Soprano.SopranoServer = SopranoServer;
 
-Soprano.Protocol = require('./core/Protocol');
-Soprano.RequestResponseProtocol = require('./core/protocols/RequestResponseProtocol');
-Soprano.FixedHeaderRequestResponseProtocol = require('./core/protocols/FixedHeaderRequestResponseProtocol');
-Soprano.StreamProtocol = require('./core/protocols/StreamProtocol');
-Soprano.FixedHeaderStreamProtocol = require('./core/protocols/FixedHeaderStreamProtocol');
-Soprano.EchoProtocol = require('./core/protocols/EchoProtocol');
+const MethodCollection = require('./core/MethodCollection');
+Soprano.MethodCollection = MethodCollection;
 
-Soprano.Controller = require('./core/Controller');
+const ProtocolCollection = require('./core/ProtocolCollection');
+Soprano.ProtocolCollection = ProtocolCollection;
 
-Soprano.Id = require('./core/Id');
+const Slave = require('./core/Slave');
+Soprano.Slave = Slave;
 
-Soprano.Adapter = require('./core/Adapter');
-Soprano.MemoryAdapter = require('./core/adapters/MemoryAdapter');
+const Disposable = require('./core/Disposable');
+Soprano.Disposable = Disposable;
 
-Soprano.Writer = require('./core/Writer');
-Soprano.Reader = require('./core/Reader');
+const DisposableMap = require('./core/DisposableMap');
+Soprano.DisposableMap = DisposableMap;
 
-Soprano.LengthPrefixedTransformer = require('./core/transformers/LengthPrefixedTransformer');
-Soprano.JSONTransformer = require('./core/transformers/JSONTransformer');
+const DisposableSet = require('./core/DisposableSet');
+Soprano.DisposableSet = DisposableSet;
 
-Soprano.fixedHeaderProtocolMixin = require('./core/mixins/fixedHeaderProtocol');
+const EndlessStream = require('./core/EndlessStream');
+Soprano.EndlessStream = EndlessStream;
 
-Soprano.utils = require('./utils');
+const EventBridge = require('./core/EventBridge');
+Soprano.EventBridge = EventBridge;
 
+const errors = require('./core/errors');
+Soprano.errors = errors;
 
-Soprano.SUPPRESS_REJECT = awync.SUPPRESS_REJECT;
-Soprano.SUPPRESS_THROW = awync.SUPPRESS_THROW;
-Soprano.SUPPRESS = awync.SUPPRESS;
-Soprano.captureErrors = awync.captureErrors;
-Soprano.releaseErrors = awync.releaseErrors;
-Soprano.run = awync;
-Soprano.sleep = awync.sleep;
-Soprano.isGeneratorFunction = awync.isGeneratorFunction;
+let Symbols = require('./core/symbols');
+Soprano.Symbols = Symbols;
+
+const debug = require('./core/debug');
+Soprano.debug = debug;
+
+const SocketFactory = require('./core/SocketFactory');
+Soprano.SocketFactory = SocketFactory;
+
+const FilterFactory = require('./core/FilterFactory');
+Soprano.FilterFactory = FilterFactory;
+
+const Protocol = require('./core/Protocol');
+Soprano.Protocol = Protocol;
+
+const RequestResponseProtocol = require('./core/protocols/RequestResponseProtocol');
+Soprano.RequestResponseProtocol = RequestResponseProtocol;
+
+const FixedHeaderRequestResponseProtocol = require('./core/protocols/FixedHeaderRequestResponseProtocol');
+Soprano.FixedHeaderRequestResponseProtocol = FixedHeaderRequestResponseProtocol;
+
+const StreamProtocol = require('./core/protocols/StreamProtocol');
+Soprano.StreamProtocol = StreamProtocol;
+
+const FixedHeaderStreamProtocol = require('./core/protocols/FixedHeaderStreamProtocol');
+Soprano.FixedHeaderStreamProtocol = FixedHeaderStreamProtocol;
+
+const EchoProtocol = require('./core/protocols/EchoProtocol');
+Soprano.EchoProtocol = EchoProtocol;
+
+const Controller = require('./core/Controller');
+Soprano.Controller = Controller;
+
+const Id = require('./core/Id');
+Soprano.Id = Id;
+
+const Adapter = require('./core/Adapter');
+Soprano.Adapter = Adapter;
+
+const MemoryAdapter = require('./core/adapters/MemoryAdapter');
+Soprano.MemoryAdapter = MemoryAdapter;
+
+const Writer = require('./core/Writer');
+Soprano.Writer = Writer;
+
+const Reader = require('./core/Reader');
+Soprano.Reader = Reader;
+
+const LengthPrefixedTransformer = require('./core/transformers/LengthPrefixedTransformer');
+Soprano.LengthPrefixedTransformer = LengthPrefixedTransformer;
+
+const JSONTransformer = require('./core/transformers/JSONTransformer');
+Soprano.JSONTransformer = JSONTransformer;
+
+const fixedHeaderProtocolMixin = require('./core/mixins/fixedHeaderProtocol');
+Soprano.fixedHeaderProtocolMixin = fixedHeaderProtocolMixin;
+
+const utils = require('./utils');
+Soprano.utils = utils;
+
+const SUPPRESS_REJECT = awync.SUPPRESS_REJECT;
+Soprano.SUPPRESS_REJECT = SUPPRESS_REJECT;
+
+const SUPPRESS_THROW = awync.SUPPRESS_THROW;
+Soprano.SUPPRESS_THROW = SUPPRESS_THROW;
+
+const SUPPRESS = awync.SUPPRESS;
+Soprano.SUPPRESS = SUPPRESS;
+
+const captureErrors = awync.captureErrors;
+Soprano.captureErrors = captureErrors;
+
+const releaseErrors = awync.releaseErrors;
+Soprano.releaseErrors = releaseErrors;
+
+const run = awync;
+Soprano.run = run;
+
+const sleep = awync.sleep;
+Soprano.sleep = sleep;
+
+const isGeneratorFunction = awync.isGeneratorFunction;
+Soprano.isGeneratorFunction = isGeneratorFunction;
 
 module.exports = Soprano;
