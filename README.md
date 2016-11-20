@@ -10,6 +10,8 @@ npm i soprano --save
 - EchoProtocol (Built-in Echo protocol)
 - Soprano.RPCProtocol: [github](https://github.com/tlghn/soprano.rpc) / [npm](https://www.npmjs.com/package/soprano.rpc)
   - Simple RPC (Remote Procedure Call) protocol with some cool features
+- Soprano.PubSubProtocol: [github](https://github.com/tlghn/soprano.pubsub) / [npm](https://www.npmjs.com/package/soprano.pubsub)
+  - Publish / Subscription protocol with some cool features
 
 
 ## Examples
