@@ -50,8 +50,6 @@ Soprano.run(function *() {
 
     let echoProtocol = new Soprano.EchoProtocol(soprano);
 
-    yield soprano.bind(echoProtocol);
-
     console.log(yield echoProtocol.echo('Hello world'));
 });
 
