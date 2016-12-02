@@ -46,9 +46,9 @@ function whichever() {
             }
 
             handlers.forEach(item => this.on(item.name, item.cb));
-            
+
             var on = this.on.bind(this, eventName);
-            
+
             return new Promise((resolve, reject) => {
                 on(function (args) {
                     if(args instanceof Error){
@@ -96,7 +96,7 @@ function whatever() {
         return new Promise((resolve, reject) => {
             var eventHost = {};
             this.on(
-                'soprano-events-whatever', 
+                'soprano-events-whatever',
                 eventHost.eventHandler = eventHandler.bind(this, eventHost, resolve, reject)
             );
         })
@@ -104,28 +104,26 @@ function whatever() {
 }
 
 function when() {
-    
+
     function eventHandler(eventHost, resolve, reject) {
-        
+
         var args = Array.prototype.slice.call(arguments, 3);
-        
+
         if(args[0] instanceof Error){
             args[0].eventArgs = args;
             args[0].eventName = eventHost.eventName;
             args = args[0];
-        } else {
-            args = {eventName: eventHost.eventName, eventArgs: args};
         }
-        
+
         this.removeListener(eventHost.eventName, eventHost.eventHandler);
-        
+
         if(args instanceof Error){
             return reject(args);
         }
-        
+
         resolve(args);
     }
-    
+
     return this[WHEN] || (this[WHEN] = new Proxy({}, {
             get: (target, prop) => async function(name){
                 return new Promise((resolve, reject) => {
@@ -135,7 +133,7 @@ function when() {
                         eventHost.eventHandler = eventHandler.bind(this, eventHost, resolve, reject)
                     )
                 });
-            }.bind(target, prop)
+            }.bind(this, prop)
         }));
 }
 

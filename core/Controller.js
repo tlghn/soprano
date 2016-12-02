@@ -78,11 +78,11 @@ class Controller extends EventEmitter {
         ((async function () {
             while (this.connected){
                 let event = await this.whichever('disposed', 'deque');
-                if(event.name === 'disposed'){
+                if(event.eventName === 'disposed'){
                     break;
                 }
                 try{
-                    let data = event.args[0];
+                    let data = event.eventArgs[0];
 
                     if(!this.client.server){
                         let middleWares = this.protocol.middleWares;
@@ -97,6 +97,7 @@ class Controller extends EventEmitter {
                     this.setResource(Symbols.ready, true);
                     this._deque();
                 } catch (err) {
+                    console.log(err);
                     if(this.connected){
                         debug('%s:Controller >>> Error occurs while writing to %s:%s', this.protocol.constructor.name, this.remoteAddress, this.remotePort);
                     } else {

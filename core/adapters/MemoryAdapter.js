@@ -149,11 +149,21 @@ class MemoryAdapter extends Adapter {
         }
         const vm = require('vm');
         const script = new vm.Script(`(${state.script})`);
-        for(let id of ids){
-            let current = this._ids.get(id);
-            if(!current) continue;
-            let result = script.runInNewContext(current)(state.arg);
+
+        function *task(_ids, script, ids) {
+            for(let id of ids){
+                let current = _ids.get(id);
+                if(!current) continue;
+                yield script.runInNewContext(current)(state.arg);
+            }
+        };
+
+        var result = [...task(this._ids, script, ids)];
+        if(result.length && !Array.isArray(arguments[0])){
+            result = result[0];
         }
+
+        return result;
     }
 
     _findIds(state){
