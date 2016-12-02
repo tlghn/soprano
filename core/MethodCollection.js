@@ -36,7 +36,7 @@ class MethodCollection extends Disposable {
             }
         }
         let method = this.getResource(name);
-        await method.apply(null, args);
+        return await method.apply(null, args);
     }
 
     wrap(){
