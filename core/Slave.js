@@ -2,7 +2,7 @@
  * Created by tolgahan on 04.11.2016.
  */
 "use strict";
-const EE = require('awync-events');
+const EE = require('./EventEmitter');
 const Symbols = require('./symbols');
 const errors = require('./errors');
 const Disposable = require('./Disposable');

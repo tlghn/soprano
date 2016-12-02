@@ -2,9 +2,8 @@
  * Created by tolgahan on 03.11.2016.
  */
 const Soprano = require('./core/Soprano');
-const awync = require('awync');
 
-const EventEmitter = require('awync-events');
+const EventEmitter = require('./core/EventEmitter');
 Soprano.EventEmitter = EventEmitter;
 
 const SopranoClient = require('./core/SopranoClient');
@@ -99,29 +98,5 @@ Soprano.fixedHeaderProtocolMixin = fixedHeaderProtocolMixin;
 
 const utils = require('./utils');
 Soprano.utils = utils;
-
-const SUPPRESS_REJECT = awync.SUPPRESS_REJECT;
-Soprano.SUPPRESS_REJECT = SUPPRESS_REJECT;
-
-const SUPPRESS_THROW = awync.SUPPRESS_THROW;
-Soprano.SUPPRESS_THROW = SUPPRESS_THROW;
-
-const SUPPRESS = awync.SUPPRESS;
-Soprano.SUPPRESS = SUPPRESS;
-
-const captureErrors = awync.captureErrors;
-Soprano.captureErrors = captureErrors;
-
-const releaseErrors = awync.releaseErrors;
-Soprano.releaseErrors = releaseErrors;
-
-const run = awync;
-Soprano.run = run;
-
-const sleep = awync.sleep;
-Soprano.sleep = sleep;
-
-const isGeneratorFunction = awync.isGeneratorFunction;
-Soprano.isGeneratorFunction = isGeneratorFunction;
 
 module.exports = Soprano;

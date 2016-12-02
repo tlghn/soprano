@@ -13,10 +13,10 @@ const errors = require('./errors');
 const stream = require('stream');
 const Stream = stream.Stream;
 const Disposable = require('./Disposable');
-const awync = require('awync');
 const debug = require('./debug')();
 const Reader = require('./Reader');
 const Writer = require('./Writer');
+const utils = require('../utils');
 
 
 class SopranoClient extends Slave {
@@ -31,7 +31,7 @@ class SopranoClient extends Slave {
 
     }
     
-    _handleBridgedEvent(source, name, args){
+    async _handleBridgedEvent(source, name, args){
         let options = this.options;
         switch (name){
             case 'close':
@@ -152,9 +152,37 @@ class SopranoClient extends Slave {
     get options(){
         return this.getResource(Symbols.options);
     }
+    
+    async _reconnectOnDisconnect(){
+        try{
+            let event = await this.whichever('error', 'close');
+            if(event.args[0]){
+                var err = new Error();
+                err.code = 'ECONNRESET';
+                //noinspection ExceptionCaughtLocallyJS
+                throw err;
+            } else {
+                delete this._connectedBefore;
+            }
+        }catch (err){
+            if(this.options.reconnectAlways){
+                err.code = 'ECONNRESET';
+            }
+            switch (err.code){
+                case 'ECONNRESET':
+                case 'ETIMEDOUT':
+                    if(this.options.reconnect){
+                        await utils.sleep(this.options.reconnectDelay || 0);
+                        this.deleteResource(Symbols.connected);
+                        this.connect(this.options);
+                    }
+                    break;
+            }
+        }
+    }
 
-    *connect(options = void 0, callback = void 0){
-
+    async connect(options = void 0, callback = void 0){
+        
         if(this.net && this.connected){
             throw new errors.InvalidOperationError('Already initialized. Call close() first');
         }
@@ -171,42 +199,13 @@ class SopranoClient extends Slave {
             debug('connecting to %s:%s', options.host, options.port);
             this.net.connect(options, callback);
             try{
-                yield awync.captureErrors;
-                yield this.whichever('error', 'connect');
+                await this.whichever('error', 'connect');
                 debug('connected');
                 if(this._connectedBefore){
                     this.emit('reconnected');
                 }
                 this._connectedBefore = true;
-
-                awync(function *() {
-                    yield awync.captureErrors;
-                    try{
-                        let event = yield this.whichever('error', 'close');
-                        if(event.args[0]){
-                            var err = new Error();
-                            err.code = 'ECONNRESET';
-                            //noinspection ExceptionCaughtLocallyJS
-                            throw err;
-                        } else {
-                            delete this._connectedBefore;
-                        }
-                    }catch (err){
-                        if(this.options.reconnectAlways){
-                            err.code = 'ECONNRESET';
-                        }
-                        switch (err.code){
-                            case 'ECONNRESET':
-                            case 'ETIMEDOUT':
-                                if(this.options.reconnect){
-                                    yield awync.sleep(this.options.reconnectDelay || 0);
-                                    this.deleteResource(Symbols.connected);
-                                    awync(this.connect.bind(this, this.options));
-                                }
-                                break;
-                        }
-                    }
-                }.bind(this));
+                this._reconnectOnDisconnect();
                 break;
             }catch (err){
                 switch (err.code){
@@ -216,7 +215,7 @@ class SopranoClient extends Slave {
                         if(!options.reconnect){
                             throw err;
                         }
-                        yield awync.sleep(options.reconnectDelay || 0);
+                        await utils.sleep(options.reconnectDelay || 0);
                         this.emit('reconnect');
                         debug('reconnecting');
                         break;
@@ -226,38 +225,38 @@ class SopranoClient extends Slave {
             }
         } while (true);
 
-        yield this;
+        return this;
     }
 
-    *createInput(){
+    async createInput(){
         let {protocol, soprano, net} = this;
         let inputs = Array.prototype.slice.call(arguments)
             .reduce((prev, cur) => prev.concat(cur), []);
         
-        let filters = yield protocol.createInputFilter();
+        let filters = await protocol.createInputFilter();
         if(!Array.isArray(filters)){
             filters = [filters];
         }
         inputs.unshift.apply(inputs, filters);
         
         if(protocol.canUseSopranoFilters()){
-            let filters = yield soprano.filterFactory.createInputFilter();
+            let filters = await soprano.filterFactory.createInputFilter();
             if(!Array.isArray(filters)){
                 filters = [filters];
             }
             inputs.unshift.apply(inputs, filters);
         }
 
-        yield new Reader(net, inputs.filter(x=>x instanceof Stream));
+        return new Reader(net, inputs.filter(x=>x instanceof Stream));
     }
 
-    *createOutput(){
+    async createOutput(){
         let {protocol, soprano, net} = this;
         let outputs = Array.prototype.slice.call(arguments)
             .reduce((prev, cur) => prev.concat(cur), []);
 
 
-        let filters = yield protocol.createOutputFilter();
+        let filters = await protocol.createOutputFilter();
         if(!Array.isArray(filters)){
             filters = [filters];
         }
@@ -265,7 +264,7 @@ class SopranoClient extends Slave {
 
 
         if(protocol.canUseSopranoFilters()){
-            let filters = yield soprano.filterFactory.createOutputFilter();
+            let filters = await soprano.filterFactory.createOutputFilter();
             if(!Array.isArray(filters)){
                 filters = [filters];
             }
@@ -274,27 +273,25 @@ class SopranoClient extends Slave {
 
         outputs = outputs.filter(x => x instanceof Stream);
 
-        yield new Writer(outputs, net);
+        return new Writer(outputs, net);
     }
 
-    *end(){
+    async end(){
         let {net} = this;
         if(!net){
             return;
         }
-        net = awync()(net, null, false);
-        yield net.end();
+        await utils.callback(net.end.bind(net));
         net.destroy();
         this.dispose();
     }
 
-    *write(data, enc){
+    async write(data, enc){
         let {net} = this;
         if(!net) {
             throw new errors.InvalidOperationError('disconnected');
         }
-        net = awync()(net, null, true);
-        yield net.write(data, enc);
+        return await utils.callback(net.write.bind(net, data, enc));
     }
 
     get remoteAddress(){

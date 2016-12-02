@@ -4,7 +4,7 @@
 "use strict";
 
 const stream = require('stream');
-const EventEmitter = require('awync-events');
+const EventEmitter = require('./EventEmitter');
 
 const errors = require('./errors');
 const net = require('net');

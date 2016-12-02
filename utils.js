@@ -69,6 +69,29 @@ class Utils {
             buffer: buffer.slice(index)
         };
     }
+
+    static async sleep(delay = 0){
+        return new Promise(resolve => setTimeout(resolve, delay));
+    }
+
+    static async callback(func){
+        return new Promise(function(request, resolve, reject) {
+            var func = request[0];
+            request[0] = null;
+            request.push(function (resolve, reject) {
+                var args = Array.prototype.slice.call(arguments, 2);
+                if(args[0] instanceof Error){
+                    args[0].callbackArgs = args;
+                    return reject(args[0]);
+                }
+                if(Array.isArray(args) && args.length === 1){
+                    args = args[0];
+                }
+                resolve(args);
+            }.bind(null, resolve, reject));
+            (func.bind.apply(func, request))();
+        }.bind(null, Array.from(arguments)));
+    }
 }
 
 Utils.DONE = DONE;

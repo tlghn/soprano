@@ -4,9 +4,15 @@
 
 "use strict";
 
+const stream = require('stream');
+
 class Writer {
 
     constructor(outputs, net){
+        if(outputs instanceof stream.Stream && net === void 0){
+            net = outputs;
+            outputs = [];
+        }
         outputs.forEach(function (stream) {
             stream.pause();
         });
@@ -14,8 +20,8 @@ class Writer {
         this._net = net;
     }
 
-    *write(data, encoding){
-        yield new Promise((resolve, reject) => {
+    async write(data, encoding){
+        return new Promise((resolve, reject) => {
             (this._outputs[0] || this._net).write(data, encoding, function (err) {
                 if(err) return reject(err);
                 return resolve();
@@ -23,8 +29,8 @@ class Writer {
         });
     }
 
-    *_transfer(from, to){
-        yield new Promise((resolve, reject) => {
+    async _transfer(from, to){
+        return new Promise((resolve, reject) => {
 
             function onReadable() {
                 function readNext(err) {
@@ -79,21 +85,20 @@ class Writer {
         });
     }
 
-    *end(data, encoding){
+    async end(data, encoding){
         if(data){
-            yield this.write(data, encoding);
+            await this.write(data, encoding);
         }
         var current = this._outputs.shift();
         while (current){
             var next = this._outputs.shift();
-            yield this._transfer(current, next || this._net);
+            await this._transfer(current, next || this._net);
             current = next;
         }
 
         delete this._outputs;
         delete this._net;
     }
-
 }
 
 module.exports = Writer;

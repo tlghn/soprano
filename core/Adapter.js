@@ -4,20 +4,20 @@
 "use strict";
 const Controller = require('./Controller');
 const Disposable = require('./Disposable');
-const EventEmitter = require('awync-events');
+const EventEmitter = require('./EventEmitter');
 
 const errors = require('./errors');
 
 class Adapter extends EventEmitter {
 
-    *getCount(){
+    async getCount(){
         throw new errors.NotImplementedError();
     }
 
     /**
      * @returns {Array.<*>}
      */
-    *getIds(){
+    async getIds(){
         throw new errors.NotImplementedError();
     }
 
@@ -25,14 +25,14 @@ class Adapter extends EventEmitter {
      * @param controller {Controller}
      * @returns {Controller}
      */
-    *add(controller){
+    async add(controller){
         throw new errors.NotImplementedError();
     }
 
     /**
      * @param id {*}
      */
-    *remove(id){
+    async remove(id){
         throw new errors.NotImplementedError();
     }
 
@@ -40,14 +40,14 @@ class Adapter extends EventEmitter {
      * @param ids {Array.<*>|*}
      * @param state {Object}
      */
-    *setState(ids, state){
+    async setState(ids, state){
         throw new errors.NotImplementedError();
     }
 
     /**
      * @param state {Object}
      */
-    *findIds(state){
+    async findIds(state){
         throw new errors.NotImplementedError();
     }
 
@@ -55,7 +55,7 @@ class Adapter extends EventEmitter {
      * @param ids {Array.<*>}
      * @param data {*}
      */
-    *post(ids, data){
+    async post(ids, data){
         throw new errors.NotImplementedError();
     }
 }

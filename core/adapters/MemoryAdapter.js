@@ -10,7 +10,6 @@ const errors = require('../errors');
 const Controller = require('../Controller');
 const cluster = require('cluster');
 const Worker = cluster.Worker;
-const awync = require('awync');
 
 const SOPRANO_MEMORY_ADAPTER = 'SopranoMemoryAdapter';
 const IdClass = require('../Id');
@@ -57,11 +56,11 @@ class MemoryAdapter extends Adapter {
      * @param args
      * @private
      */
-    *_sendReceive(sender, name, args = void 0){
+    async _sendReceive(sender, name, args = void 0){
         let msg = this._createMessage(name, args);
         sender.send(msg);
-        let reply = yield this.when[`${name}:${msg.key}`]();
-        yield reply.result;
+        let reply = await this.when[`${name}:${msg.key}`]();
+        return reply.result;
     }
 
     /**
@@ -69,9 +68,9 @@ class MemoryAdapter extends Adapter {
      * @param args
      * @private
      */
-    *_sendReceiveFromMaster(name, args = void 0){
+    async _sendReceiveFromMaster(name, args = void 0){
         MemoryAdapter.throwIfMaster();
-        yield this._sendReceive(process, name, args);
+        return await this._sendReceive(process, name, args);
     }
 
     /**
@@ -80,9 +79,9 @@ class MemoryAdapter extends Adapter {
      * @param args
      * @private
      */
-    *_sendReceiveFromWorker(worker, name, args = void 0){
+    async _sendReceiveFromWorker(worker, name, args = void 0){
         MemoryAdapter.throwIfWorker();
-        yield this._sendReceive(worker, name, args);
+        return await this._sendReceive(worker, name, args);
     }
 
     /**
@@ -98,7 +97,7 @@ class MemoryAdapter extends Adapter {
         if(cluster.isMaster){
             switch (message.name){
                 case 'call':
-                    return awync(function *(worker, message) {
+                    return ((async function (worker, message) {
                         var name = message.args.name;
                         if(typeof this[name] !== 'function'){
                             throw new errors.InvalidOperationError('Unknown method %s', name);
@@ -106,9 +105,9 @@ class MemoryAdapter extends Adapter {
                         var params = (message.args.params || []).slice();
                         params.unshift(this);
                         let f = this[name].bind.apply(this[name], params);
-                        message.result = yield f();
+                        message.result = await f();
                         worker.send(message);
-                    }.bind(this, worker, message));
+                    }).bind(this, worker, message))();
                 case 'postReply':
                     message.name = 'post';
                     return this._emitMessageResult(message);
@@ -120,16 +119,16 @@ class MemoryAdapter extends Adapter {
         } else {
             switch (message.name){
                 case 'post':
-                    return awync(function *(worker, message) {
+                    return ((async function (worker, message) {
                         let controller = this._children.get(message.args.id);
                         if(!controller){
                             message.result = false;
                         } else {
-                            message.result = yield controller.post(message.args.data);
+                            message.result = await controller.post(message.args.data);
                         }
                         message.name = 'postReply';
                         worker.send(message);
-                    }.bind(this, worker, message));
+                    }).bind(this, worker, message))();
             }
             this._emitMessageResult(message);
         }
@@ -141,7 +140,7 @@ class MemoryAdapter extends Adapter {
      * @param state
      * @private
      */
-    *_setState(ids, state){
+    _setState(ids, state){
         if(typeof state.script !== 'string'){
             throw new errors.InvalidArgumentError('state does not have valid script property');
         }
@@ -154,11 +153,10 @@ class MemoryAdapter extends Adapter {
             let current = this._ids.get(id);
             if(!current) continue;
             let result = script.runInNewContext(current)(state.arg);
-            yield result;
         }
     }
 
-    *_findIds(state){
+    _findIds(state){
         if(typeof state.script !== 'string'){
             throw new errors.InvalidArgumentError('state does not have valid script property');
         }
@@ -170,7 +168,7 @@ class MemoryAdapter extends Adapter {
                 result.push(entry[0]);
             }
         }
-        yield result;
+        return result;
     }
 
     /**
@@ -202,23 +200,23 @@ class MemoryAdapter extends Adapter {
         }
     }
 
-    *getCount(){
+    async getCount(){
         if(cluster.isMaster){
-            yield this._ids.size;
-        } else {
-            yield this._sendReceiveFromMaster('call', {name:'getCount'});
+            return this._ids.size;
         }
+        return await this._sendReceiveFromMaster('call', {name:'getCount'});
     }
 
-    *getIds(){
+    async getIds(){
         if(cluster.isMaster){
-            yield [...this._ids.keys()];
-        } else {
-            yield this._sendReceiveFromMaster('call', {name: 'getIds'});
+            return [...this._ids.keys()];
         }
+
+        return await this._sendReceiveFromMaster('call', {name: 'getIds'});
+
     }
 
-    *_upsert(id){
+    _upsert(id){
         if(!this._ids.has(id)){
             this._ids.set(id, {});
         }
@@ -228,81 +226,76 @@ class MemoryAdapter extends Adapter {
      * @param controller {Controller}
      * @returns {Controller}
      */
-    *add(controller){
+    async add(controller){
 
         let id = controller.id = MemoryAdapter.generateId(controller);
 
         if(cluster.isMaster){
-            yield this._upsert(id);
+            await this._upsert(id);
         } else {
-            yield this._sendReceiveFromMaster('call', {name: '_upsert', params:[id]});
+            await this._sendReceiveFromMaster('call', {name: '_upsert', params:[id]});
         }
 
-        controller.on('close', function (id) {
-            awync(this.remove.bind(this, id));
+        controller.on('close', async function (id) {
+            await this.remove(id);
         }.bind(this, id));
 
         this._children.set(id, controller, true);
 
-        yield controller;
+        return controller;
     }
 
-    *_remove(id){
-        yield this._ids.delete(id);
+    _remove(id){
+        return this._ids.delete(id);
     }
 
-    *remove(id){
+    async remove(id){
         if(cluster.isMaster){
-            yield this._remove(id);
+            this._remove(id);
         } else {
-            yield this._sendReceiveFromMaster('call', {name: '_remove', params:[id]});
+            await this._sendReceiveFromMaster('call', {name: '_remove', params:[id]});
         }
-        yield this._children.delete(id);
+        return await this._children.delete(id);
     }
 
-    *setState(ids, state){
+    async setState(ids, state){
         if(cluster.isMaster){
-            yield this._setState(ids, state);
-        } else {
-            yield this._sendReceiveFromMaster('call', {name:'setState', params:[ids, state]});
+            return this._setState(ids, state);
         }
+        return await this._sendReceiveFromMaster('call', {name:'setState', params:[ids, state]});
     }
 
-    *findIds(state){
+    async findIds(state){
         if(cluster.isMaster){
-            yield this._findIds(state);
-        } else {
-            yield this._sendReceiveFromMaster('call', {name: 'findIds', params:[state]});
+            return await this._findIds(state);
         }
+
+        return await this._sendReceiveFromMaster('call', {name: 'findIds', params:[state]});
     }
 
-    *_post(ids, data){
+    async _post(ids, data){
         if(!Array.isArray(ids)){
             ids = [ids];
         }
-        const ops = [];
 
         for(let id of ids){
             let worker = MemoryAdapter.getWorkerFromId(id);
             if(!worker){
                 let controller = this._children.get(id);
                 if(controller){
-                    ops.push(controller.post.bind(controller, data));
+                    await controller.post(data);
                 }
             } else {
-                ops.push(this._sendReceiveFromWorker.bind(this, worker, 'post', {id, data}))
+                await this._sendReceiveFromWorker.bind(this, worker, 'post', {id, data});
             }
         }
-
-        yield awync(ops);
     }
 
-    *post(ids, data){
+    async post(ids, data){
         if(cluster.isMaster){
-            yield this._post(ids, data);
-        } else {
-            yield this._sendReceiveFromMaster('call', {name:'_post', params:[ids, data]});
+            return await this._post(ids, data);
         }
+        await this._sendReceiveFromMaster('call', {name:'_post', params:[ids, data]});
     }
 
     _onDispose(){

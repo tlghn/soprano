@@ -4,7 +4,6 @@
 "use strict";
 
 const Protocol = require('./../Protocol');
-const awync = require('awync');
 const SopranoClient = require('../SopranoClient');
 const debug = require('../debug')();
 
@@ -25,29 +24,29 @@ class RequestResponseProtocol extends Protocol {
      * @returns {*}
      * @private
      */
-    *_execute(data, options = void 0, writeHeader = true, requestOptions = void 0){
+    async _execute(data, options = void 0, writeHeader = true, requestOptions = void 0){
 
         debug('%s >> initialize request', this.constructor.name);
 
         let middleWares = this.middleWares;
         for(let middleWare of middleWares){
-            data = yield middleWare(data);
+            data = await middleWare(data);
         }
 
-        let connection = yield this._connect(options, writeHeader);
+        let connection = await this._connect(options, writeHeader);
 
         let request = this.createOutput(connection, requestOptions);
-        let output = yield connection.createOutput(request);
-        yield output.end(data);
+        let output = await connection.createOutput(request);
+        await output.end(data);
 
         debug('%s >> request sent to %s:%s', this.constructor.name, connection.remoteAddress, connection.remotePort);
 
-        let input = yield connection.createInput(this.createInput(connection, request));
-        let value = yield input.read();
-        yield input.release();
+        let input = await connection.createInput(this.createInput(connection, request));
+        let value = await input.read();
+        await input.release();
 
         debug('%s >> reply received from %s:%s', this.constructor.name, connection.remoteAddress, connection.remotePort);
-        yield value;
+        return value;
     }
 
     /**
@@ -55,40 +54,39 @@ class RequestResponseProtocol extends Protocol {
      * @param header {Buffer}
      */
     handover(connection, header){
-
-        awync(function *(connection, header) {
-            yield awync.captureErrors;
+        
+        ((async function (connection, header) {
             let ip = connection.remoteAddress;
             let port = connection.remotePort;
             debug('%s >> connection accepted from %s:%s', this.constructor.name, ip, port);
             try{
                 let request = this.createInput(connection, header);
-                let input = yield connection.createInput(request);
-                let result = yield input.read();
-                yield input.release();
+                let input = await connection.createInput(request);
+                let result = await input.read();
+                await input.release();
                 debug('%s >> request received from %s:%s', this.constructor.name, ip, port);
 
                 try{
                     let middleWares = this.middleWares;
                     for(let middleWare of middleWares){
-                        result = yield middleWare(result, connection);
+                        result = await middleWare(result, connection);
                     }
-                    result = yield this.handle(null, result, connection);
+                    result = await this.handle(null, result, connection);
                 } catch (err){
-                    result = yield this.handle(err, result, connection);
+                    result = await this.handle(err, result, connection);
                 }
 
-                let output = yield connection.createOutput(this.createOutput(connection, request));
-                yield output.end(result);
+                let output = await connection.createOutput(this.createOutput(connection, request));
+                await output.end(result);
                 debug('%s >> reply sent to %s:%s', this.constructor.name, ip, port);
 
             } catch (err){
                 debug('%s >> %s %s:%s', this.constructor.name, err, ip, port);
             } finally {
-                yield connection.end();
+                await connection.end();
                 debug('%s >> disconnected from %s:%s', this.constructor.name, ip, port);
             }
-        }.bind(this, connection, header));
+        }).bind(this, connection, header))();
     }
 
     //noinspection JSMethodCanBeStatic
@@ -98,8 +96,8 @@ class RequestResponseProtocol extends Protocol {
      * @param sopranoClient {SopranoClient}
      * @returns {*}
      */
-    *handle(err, data, sopranoClient){
-        yield err || data;
+    async handle(err, data, sopranoClient){
+        return err || data;
     }
 }
 

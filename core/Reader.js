@@ -16,14 +16,14 @@ class Reader {
         inputs.forEach(input => input.pause());
     }
 
-    *read(chunkSize = 0){
+    async read(chunkSize = 0){
         if(isNaN(chunkSize)) {
             chunkSize = 0;
         }
 
         chunkSize = chunkSize > 0 ? [chunkSize] : [];
 
-        yield new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => {
 
             function transform(value, copy) {
                 if(!copy.length){
@@ -82,7 +82,7 @@ class Reader {
         });
     }
 
-    *release(willResume = true){
+    async release(willResume = true){
         if(willResume || (typeof willResume === 'undefined')){
             this._net.resume();
         }

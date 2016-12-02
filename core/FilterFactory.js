@@ -5,8 +5,8 @@
 "use strict";
 
 class FilterFactory {
-    *createInputFilter() {}
-    *createOutputFilter() {}
+    async createInputFilter() {}
+    async createOutputFilter() {}
 }
 
 FilterFactory.defaultFactory = new FilterFactory();

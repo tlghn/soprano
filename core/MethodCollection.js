@@ -6,7 +6,6 @@
 
 const calp = require('calp');
 const Symbols = require('./symbols');
-const awync = require('awync');
 const errors = require('./errors');
 
 const Disposable = require('./Disposable');
@@ -17,15 +16,15 @@ class MethodCollection extends Disposable {
         super();
     }
 
-    register(name, generatorFunc){
-        if(!awync.isGeneratorFunction(generatorFunc)){
-            throw new errors.InvalidArgumentError('generatorFunc is not a generator function');
+    register(name, func){
+        if(typeof func !== 'function'){
+            throw new errors.InvalidArgumentError('func is not a function');
         }
-        this.setResource(name, generatorFunc);
+        this.setResource(name, func);
         return this.wrap();
     }
 
-    *execute(name, args){
+    async execute(name, args){
         if(!this.hasResource(name)){
             throw new errors.InvalidOperationError('Method not found', {name});
         }
@@ -37,7 +36,7 @@ class MethodCollection extends Disposable {
             }
         }
         let method = this.getResource(name);
-        yield method.apply(null, args);
+        await method.apply(null, args);
     }
 
     wrap(){

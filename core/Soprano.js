@@ -4,8 +4,6 @@
 "use strict";
 
 const EE = require('events');
-const EventEmitter = require('awync-events');
-const awync = require('awync');
 const Protocol = require('./Protocol');
 const ProtocolCollection = require('./ProtocolCollection');
 const SocketFactory = require('./SocketFactory');
@@ -17,6 +15,7 @@ const errors = require('./errors');
 const Symbols = require('./symbols');
 const SopranoServer = require('./SopranoServer');
 const SopranoClient = require('./SopranoClient');
+const EventEmitter = require('./EventEmitter');
 
 class Soprano extends EventEmitter {
 
@@ -118,13 +117,13 @@ class Soprano extends EventEmitter {
         this.setResource(Symbols.host, host);
     }
 
-    *listen(options = void 0){
+    async listen(options = void 0){
         let server = new SopranoServer(this, options);
-        yield server.listen();
+        return await server.listen();
     }
 
-    *bind(protocol, options){
-        yield this.protocols.bind(protocol, options);
+    async bind(protocol, options){
+        return await this.protocols.bind(protocol, options);
     }
 
     createProtocol(protocolClass, options = void 0){
@@ -138,11 +137,10 @@ class Soprano extends EventEmitter {
      * @param options SocketFactory options
      * @returns Soprano
      */
-    static *connect(protocol, options = void 0){
+    static async connect(protocol, options = void 0){
         let client = new SopranoClient(protocol, options);
-        yield client.connect();
+        return await client.connect();
     }
-
 
     _onDispose(){
 

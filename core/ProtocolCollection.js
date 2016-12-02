@@ -5,7 +5,6 @@
 const Protocol = require('./Protocol');
 const Symbols = require('./symbols');
 const errors = require('./errors');
-const awync = require('awync');
 
 class ProtocolCollection extends Protocol {
     
@@ -16,31 +15,31 @@ class ProtocolCollection extends Protocol {
         }
     }
 
-    *getMaxHeaderLength(){
+    async getMaxHeaderLength(){
         let max = 0;
         for(let protocol of this.getProtocols()){
-            let current = yield protocol.getMaxHeaderLength();
+            let current = await protocol.getMaxHeaderLength();
             if(current > max){
                 max = current;
             }
         }
-        yield max;
+        return max;
     }
 
-    *getMinHeaderLength(){
-        let min = yield this.getMaxHeaderLength();
+    async getMinHeaderLength(){
+        let min = await this.getMaxHeaderLength();
 
         for(let protocol of this.getProtocols()){
-            let current = yield protocol.getMinHeaderLength();
+            let current = await protocol.getMinHeaderLength();
             if(current < min){
                 min = current;
             }
         }
-        yield min;
+        return min;
     }
 
 
-    *bind(protocol, options){
+    async bind(protocol, options){
         throw new errors.NotImplementedError();
     }
 
@@ -49,11 +48,11 @@ class ProtocolCollection extends Protocol {
     }
 
 
-    *matchHeader(buffer, startIndex, endIndex){
+    async matchHeader(buffer, startIndex, endIndex){
         var needMoreData = false;
 
         for(let protocol of this.getProtocols()){
-            let result = yield protocol.matchHeader(buffer, startIndex, endIndex);
+            let result = await protocol.matchHeader(buffer, startIndex, endIndex);
             if(result === null){
                 continue;
             }
@@ -64,16 +63,15 @@ class ProtocolCollection extends Protocol {
             }
 
             if(result instanceof Protocol){
-                yield result;
-                return;
+                return result;
             }
         }
 
         if(needMoreData){
-            yield false;
-        } else {
-            yield null;
-        }
+            return false;
+        } 
+        
+        return null;
     }
 
 
@@ -112,7 +110,7 @@ class Unique extends ProtocolCollection {
         }
     }
 
-    *bind(protocol, options){
+    async bind(protocol, options){
         ProtocolCollection.checkIfBindable('protocol', typeof protocol === 'object' && protocol.constructor);
 
         var protocols = this._protocols;
@@ -126,7 +124,7 @@ class Unique extends ProtocolCollection {
         }
         this._protocols.add(protocol);
         
-        yield protocol;
+        return protocol;
     }
 
     _onDispose(){

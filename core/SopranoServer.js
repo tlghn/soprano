@@ -13,9 +13,8 @@ const SopranoClient = require('./SopranoClient');
 const Protocol = require('./Protocol');
 const stream = require('stream');
 const Disposable = require('./Disposable');
-const EventEmitter = require('awync-events');
-const awync = require('awync');
 const Reader = require('./Reader');
+const Writer = require('./Writer');
 
 class SopranoServer extends Slave {
 
@@ -24,10 +23,9 @@ class SopranoServer extends Slave {
         this.setResource(Symbols.options, options);
     }
 
-    *_handleBridgedEvent(source, name, args){
+    async _handleBridgedEvent(source, name, args){
         switch (name){
             case 'connection':
-                yield awync.captureErrors;
                 let client = args[0];
                 client.setNoDelay(true);
 
@@ -35,15 +33,15 @@ class SopranoServer extends Slave {
                     let reader = new Reader(client);
                     let protocols = this.soprano.protocols;
     
-                    let minHeaderLength = yield protocols.getMinHeaderLength();
-                    let maxHeaderLength = yield protocols.getMaxHeaderLength();
+                    let minHeaderLength = await protocols.getMinHeaderLength();
+                    let maxHeaderLength = await protocols.getMaxHeaderLength();
     
                     let headerBytes = Buffer.alloc(maxHeaderLength);
                     let headerPos = 0;
                     let protocol = null;
     
                     while (!protocol){
-                        let chunk = yield reader.read(minHeaderLength);
+                        let chunk = await reader.read(minHeaderLength);
 
                         if(headerPos > maxHeaderLength){
                             headerBytes = Buffer.concat([headerBytes, chunk]);
@@ -53,7 +51,7 @@ class SopranoServer extends Slave {
                             minHeaderLength = 1;
                         }
 
-                        let matchResult = yield protocols.matchHeader(headerBytes, 0, headerPos);
+                        let matchResult = await protocols.matchHeader(headerBytes, 0, headerPos);
                         if(matchResult === false){
                             continue;
                         }
@@ -69,18 +67,17 @@ class SopranoServer extends Slave {
 
                     let sopranoClient = SopranoClient.create(protocol, client, true);
                     sopranoClient.server = this;
-                    yield protocol.handover(sopranoClient, headerBytes.slice(0, headerPos));
-
-                    yield reader.release(false);
-
+                    await protocol.handover(sopranoClient, headerBytes.slice(0, headerPos));
+                    await reader.release(false);
                 } catch (err){
-                    yield awync()(client.write, client)(err.constructor.name + ':' + err.message);
+                    let writer = new Writer(client);
+                    await writer.end(err.constructor.name + ':' + err.message);
                     client.dispose();
                 }
 
                 break;
         }
-        yield false;
+        return false;
     }
 
     /**
@@ -111,7 +108,7 @@ class SopranoServer extends Slave {
         return this.getResource(Symbols.port) || (this.initialOptions && this.initialOptions.port) || this.soprano.port;
     }
 
-    *listen(options = void 0){
+    async listen(options = void 0){
 
         let {host, port} = this;
         options = Object.assign({}, {host, port}, this.getResource(Symbols.options), options);
@@ -137,9 +134,9 @@ class SopranoServer extends Slave {
 
         this.net.listen(options);
 
-        yield this.whichever('error', 'listening');
+        await this.whichever('error', 'listening');
 
-        yield this;
+        return this;
     }
 }
 

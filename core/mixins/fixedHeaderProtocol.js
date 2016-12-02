@@ -22,25 +22,28 @@ class FixedHeaderProtocolMixin {
         return this.getResource(Symbols.header);
     }
 
-    *getMaxHeaderLength(){
-        yield this._getHeader().length;
+    async getMaxHeaderLength(){
+        return this._getHeader().length;
     }
 
-    *writeHeader(connection) {
-        yield connection.write(this._getHeader());
+    async writeHeader(connection) {
+        return await connection.write(this._getHeader());
     }
 
-    *matchHeader(buffer, startIndex, endIndex) {
+    async matchHeader(buffer, startIndex, endIndex) {
         let header = this._getHeader();
         let len = endIndex - startIndex;
         let result = buffer.compare(header, 0, Math.min(len, header.length), startIndex, endIndex);
+        
         if(result){
-            yield null;
-        } else if(len >= header.length) {
-            yield this;
-        } else {
-            yield false;
+            return null;
         }
+
+        if(len >= header.length) {
+            return this;
+        }
+
+        return false;
     }
 }
 

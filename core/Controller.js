@@ -3,7 +3,7 @@
  */
 "use strict";
 
-const EventEmitter = require('awync-events');
+const EventEmitter = require('./EventEmitter');
 const Disposable = require('./Disposable');
 const SopranoClient = require('./SopranoClient');
 const errors = require('./errors');
@@ -12,7 +12,6 @@ const Protocol = require('./Protocol');
 const EventBridge = require('./EventBridge');
 const FLAG_READ = 1;
 const FLAG_WRITE = 2;
-const awync = require('awync');
 const debug = require('./debug')();
 
 class Controller extends EventEmitter {
@@ -42,26 +41,25 @@ class Controller extends EventEmitter {
 
     _handleConnect(){
         this.canRead && this.connected &&
-        awync(function *() {
+        ((async function() {
             while (this.connected){
-                let input = yield this.client.createInput(this.protocol.createInput(this.client, this.header));
+                let input = await this.client.createInput(this.protocol.createInput(this.client, this.header));
                 try{
-                    let data = yield input.read();
+                    let data = await input.read();
                     debug('%s:Controller >>> Received data from %s:%s', this.protocol.constructor.name, this.remoteAddress, this.remotePort);
 
                     if(this.client.server){
                         let middleWares = this.protocol.middleWares;
                         for(let mw of middleWares){
                             try{
-                                data = yield mw(data, this.client);
+                                data = await mw(data, this.client);
                             } catch (err) {
-                                yield this._handle(err, data);
-                                return;
+                                return await this._handle(err, data);
                             }
                         }
                     }
 
-                    yield this._handle(null, data);
+                    await this._handle(null, data);
                     debug('%s:Controller >>> Incoming data processed for %s:%s', this.protocol.constructor.name, this.remoteAddress, this.remotePort);
 
                 } catch (err){
@@ -71,15 +69,15 @@ class Controller extends EventEmitter {
                         break;
                     }
                 } finally {
-                    yield input.release();
+                    await input.release();
                 }
             }
-        }.bind(this));
+        }).bind(this))();
 
         this.canWrite && this.connected &&
-        awync(function *() {
+        ((async function () {
             while (this.connected){
-                let event = yield this.whichever('disposed', 'deque');
+                let event = await this.whichever('disposed', 'deque');
                 if(event.name === 'disposed'){
                     break;
                 }
@@ -89,12 +87,12 @@ class Controller extends EventEmitter {
                     if(!this.client.server){
                         let middleWares = this.protocol.middleWares;
                         for(let mw of middleWares){
-                            data = yield mw(data);
+                            data = await mw(data);
                         }
                     }
 
-                    let output = yield this.client.createOutput(this.protocol.createOutput(this.client, this.header));
-                    yield output.end(data);
+                    let output = await this.client.createOutput(this.protocol.createOutput(this.client, this.header));
+                    await output.end(data);
                     debug('%s:Controller >>> Sent data to %s:%s', this.protocol.constructor.name, this.remoteAddress, this.remotePort);
                     this.setResource(Symbols.ready, true);
                     this._deque();
@@ -106,7 +104,7 @@ class Controller extends EventEmitter {
                     }
                 }
             }
-        }.bind(this));
+        }).bind(this))();
     }
 
     get header(){
@@ -196,7 +194,7 @@ class Controller extends EventEmitter {
      * @param data
      * @protected
      */
-    *_handle(err, data){
+    async _handle(err, data){
         throw new errors.NotImplementedError();
     }
 
@@ -204,7 +202,7 @@ class Controller extends EventEmitter {
      * @param data
      * @protected
      */
-    *_write(data){
+    async _write(data){
         if(!this.canWrite){
             throw new errors.InvalidOperationError('This controller not configured for write operations');
         }
@@ -213,7 +211,7 @@ class Controller extends EventEmitter {
         this._deque();
     }
 
-    *post(message){
+    async post(message){
 
     }
 }

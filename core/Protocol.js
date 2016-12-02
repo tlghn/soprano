@@ -10,7 +10,6 @@ const Disposable = require('./Disposable');
 const stream = require('stream');
 const Stream = stream.Stream;
 const EventBridge = require('./EventBridge');
-const awync = require('awync');
 const FilterFactory = require('./FilterFactory');
 const debug = require('./debug')();
 const Reader = require('./Reader');
@@ -29,49 +28,51 @@ class Protocol extends Slave {
      * @returns {SopranoClient}
      * @protected
      */
-    *_connect(options, writeHeader = true){
+    async _connect(options, writeHeader = true){
         let Soprano = require('./Soprano');
-        let connection = yield Soprano.connect(this, options);
-        connection.on('reconnected', function (conn) {
-            awync(this.writeHeader.bind(this, conn));
-        }.bind(this, connection));
+        let connection = await Soprano.connect(this, options);
+        connection.on('reconnected', async function (conn, writeHeader) {
+            if(writeHeader){
+                await this.writeHeader(conn);
+            }
+        }.bind(this, connection, writeHeader));
         if(writeHeader){
-            yield this.writeHeader(connection);
+            await this.writeHeader(connection);
         }
         debug('%s >> client ready on %s:%s', this.constructor.name, connection.remoteAddress, connection.remotePort);
-        yield connection;
+        return connection;
     }
 
-    *_callMiddleWares(){
+    async _callMiddleWares(){
         let middleWares = this.getResource(Symbols.middlewares);
         let args = Array.prototype.slice.call(arguments);
         args.unshift(void 0);
 
         for(let middleWare of middleWares){
             let f = middleWare.bind.apply(middleWare, args);
-            yield f();
+            await f();
         }
     }
 
     /**
      * @returns {Number}
      */
-    *getMaxHeaderLength(){
-        yield 0;
+    async getMaxHeaderLength(){
+        return 0;
     }
 
     /**
      * @returns {Number}
      */
-    *getMinHeaderLength(){
-        yield this.getMaxHeaderLength();
+    async getMinHeaderLength(){
+        return this.getMaxHeaderLength();
     }
 
     //noinspection JSMethodCanBeStatic
     /**
      * @param connection SopranoClient
      */
-    *writeHeader(connection) {
+    async writeHeader(connection) {
         throw new errors.NotImplementedError();
     }
 
@@ -115,20 +116,20 @@ class Protocol extends Slave {
     /**
      * @returns {Array.<Stream>|Stream|undefined}
      */
-    *createOutputFilter(){
+    async createOutputFilter(){
         let factory = this.filterFactory;
         if(factory){
-            yield factory.createOutputFilter();
+            return await factory.createOutputFilter();
         }
     }
 
     /**
      * @returns {Array.<Stream>|Stream|undefined}
      */
-    *createInputFilter(){
+    async createInputFilter(){
         let factory = this.filterFactory;
         if(factory){
-            yield factory.createInputFilter();
+            return await factory.createInputFilter();
         }
     }
 
@@ -172,7 +173,7 @@ class Protocol extends Slave {
      * @param endIndex Number
      * @yields null|false|Object
      */
-    *matchHeader(buffer, startIndex, endIndex) {
+    async matchHeader(buffer, startIndex, endIndex) {
         throw new errors.NotImplementedError();
     }
 

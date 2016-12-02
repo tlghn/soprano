@@ -13,19 +13,18 @@ class EchoProtocol extends FHRRP {
         super(soprano, Buffer.from('ECHO'));
     }
 
-    *echo(msg){
+    async echo(msg){
         debug('Sending %s', msg);
-        yield String(yield this._execute(msg));
+        return String(await this._execute(msg));
     }
 
-    *handle(err, msg, connection){
+    async handle(err, msg, connection){
         if(err) {
             debug('Receive failed with %s', err);
-            yield err;
-        } else {
-            debug('Received:%s', msg);
-            yield 'ECHO: ' + msg;
+            return err;
         }
+
+        return msg;
     }
 
     createInput(){

@@ -7,7 +7,6 @@ const Disposable = require('./Disposable');
 const errors = require('./errors');
 const Symbols = require('./symbols');
 const EE = require('events');
-const awync = require('awync');
 
 function defaultMapper(arg) {
     return arg;
@@ -67,47 +66,29 @@ class EventBridge extends Disposable {
      * @param prefix {String}
      * @returns EventBridge
      */
-    bind(events, prefix = ''){
+    async bind(events, prefix = ''){
         let {source, target, handlers, mapper} = this;
 
         if(typeof events[Symbol.iterator] !== 'function'){
             events = [events];
         }
-
-        events.forEach(cur => {
-
+        
+        for(let cur of events){
             if(!handlers.hasOwnProperty(cur)){
                 var handler;
-                handlers[cur] = handler = function (source, mapper, name) {
+                handlers[cur] = handler = async function (source, mapper, name) {
                     var args = Array.prototype.slice.call(arguments, 3);
                     args = args.map(mapper);
                     var handler = this._handleBridgedEvent;
                     if(typeof handler === 'function'){
-
-                        if(awync.isGeneratorFunction(handler)){
-                            return awync(handler.bind(this, source, name, args), awync.SUPPRESS_REJECT)
-                                .then(function (name, args, result) {
-                                    if(result instanceof Error){
-                                        if(EE.listenerCount(this, 'error')){
-                                            this.emit('error', result);
-                                        }
-                                        result = false;
-                                    }
-
-                                    if(result) {
-                                        return;
-                                    }
-
-                                    if(EE.listenerCount(this, name)){
-                                        args.unshift(name);
-                                        this.emit.apply(this, args);
-                                    }
-
-                                }.bind(this, name, args));
-                        }
-
-                        if(handler.call(this, source, name, args)){
-                            return;
+                        try{
+                            let result = await handler.call(this, source, name, args);
+                            if(result) {
+                                return;
+                            }
+                        }catch (err){
+                            name = 'error';
+                            args = [err];
                         }
                     }
 
@@ -118,8 +99,8 @@ class EventBridge extends Disposable {
 
                 }.bind(target, source, mapper, prefix + cur);
                 source.on(cur, handler);
-            }
-        });
+            }            
+        }
 
         return this;
     }

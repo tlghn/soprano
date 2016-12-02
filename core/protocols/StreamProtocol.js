@@ -39,12 +39,12 @@ class StreamProtocol extends Protocol {
      * @returns {Controller}
      * @protected
      */
-    *_execute(options = void 0, header = void 0){
+    async _execute(options = void 0, header = void 0){
         debug('%s >> initialize request', this.constructor.name);
-        let connection = yield this._connect(options);
-        let controller = yield this.createClientController(connection);
+        let connection = await this._connect(options);
+        let controller = await this.createClientController(connection);
         controller.header = header;
-        yield controller;
+        return controller;
     }
 
     /**
@@ -52,11 +52,11 @@ class StreamProtocol extends Protocol {
      * @param header {Buffer}
      * @returns {Controller}
      */
-    *handover(connection, header){
+    async handover(connection, header){
         debug('%s >> connection accepted from %s:%s', this.constructor.name, connection.remoteAddress, connection.remotePort);
-        let controller = yield this.createServerController(connection);
+        let controller = await this.createServerController(connection);
         controller.header = header;
-        yield this.adapter.add(controller);
+        return await this.adapter.add(controller);
     }
 
     /**
