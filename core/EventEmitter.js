@@ -137,44 +137,48 @@ function when() {
         }));
 }
 
-function EventEmitter() {
-    if (!(this instanceof EventEmitter)) {
-        return EventEmitter.attach(arguments[0]);
+
+class EventEmitter extends EE {
+    constructor(){
+        super();
+    }
+
+    get when(){
+        return when.call(this);
+    }
+
+    get whatever() {
+        return whatever.call(this);
+    }
+
+    get whichever(){
+        return whichever.call(this);
+    }
+
+    static attch(target){
+        if(typeof target === 'function'){
+            if(!target.prototype){
+                return;
+            }
+            target = target.prototype;
+        }
+
+        if(typeof target !== 'object' || !target || target[EVENT_EMITTER]){
+            return target;
+        }
+
+        target[EVENT_EMITTER] = true;
+
+        Object.defineProperties(target, {
+            when: { get: when },
+            whatever: {get: whatever },
+            whichever: {get: whichever }
+        });
+
+        return target;
     }
 }
 
-util.inherits(EventEmitter, EE);
-
-EventEmitter.prototype.when = async function () {
-};
-EventEmitter.prototype.whatever = async function () {
-};
-EventEmitter.prototype.whichever = async function () {
-};
-
-EventEmitter.attach = function (target) {
-    if(typeof target === 'function'){
-        if(!target.prototype){
-            return;
-        }
-        target = target.prototype;
-    }
-
-    if(typeof target !== 'object' || !target || target[EVENT_EMITTER]){
-        return target;
-    }
-
-    target[EVENT_EMITTER] = true;
-
-    Object.defineProperties(target, {
-        when: { get: when },
-        whatever: {get: whatever },
-        whichever: {get: whichever }
-    });
-
-    return target;
-};
-
-EventEmitter.attach(EventEmitter.prototype);
+EventEmitter.prototype[EVENT_EMITTER] = true;
 
 module.exports = EventEmitter;
