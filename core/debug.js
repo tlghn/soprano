@@ -29,7 +29,7 @@ function _getCallerFile() {
 
     Error.prepareStackTrace = originalFunc;
 
-    currentfile = path.normalize(currentfile);
+    callerfile = path.normalize(callerfile);
 
     let modulesIndex = callerfile.indexOf(NODE_MODULES);
     let appPath = root;
