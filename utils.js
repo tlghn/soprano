@@ -92,6 +92,24 @@ class Utils {
             (func.bind.apply(func, request))();
         }.bind(null, Array.from(arguments)));
     }
+    
+    static async errorOrResult(func){
+        var args = Array.from(arguments);
+        args.unshift(Utils);
+        let f = Utils.callback.bind.apply(Utils.callback, args);
+        let result = await f();
+        if(Array.isArray(result)){
+            
+            if(result[0] === null){
+                result.shift();
+            }
+            
+            if(result.length === 1) {
+                result = result[0];
+            }
+        }
+        return result;
+    }
 }
 
 Utils.DONE = DONE;
