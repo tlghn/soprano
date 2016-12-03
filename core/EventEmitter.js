@@ -155,7 +155,7 @@ class EventEmitter extends EE {
         return whichever.call(this);
     }
 
-    static attch(target){
+    static attach(target){
         if(typeof target === 'function'){
             if(!target.prototype){
                 return;
