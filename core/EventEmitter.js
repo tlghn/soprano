@@ -47,15 +47,22 @@ function whichever() {
 
             handlers.forEach(item => this.on(item.name, item.cb));
 
-            var on = this.on.bind(this, eventName);
+            function eventHandler(eventHost, resolve, reject, args) {
+                this.removeListener(eventHost.eventName, eventHost.eventHandler);
+
+                if(args instanceof Error){
+                    return reject(args);
+                }
+
+                resolve(args);
+            }
 
             return new Promise((resolve, reject) => {
-                on(function (args) {
-                    if(args instanceof Error){
-                        return reject(args);
-                    }
-                    resolve(args);
-                });
+                var eventHost = {eventName};
+                this.on(
+                    eventHost.eventName,
+                    eventHost.eventHandler = eventHandler.bind(this, eventHost, resolve, reject)
+                );
             });
 
         }.bind(this, 'soprano-events-whicever-' + WHICEVER_COUNT.next(), args))();

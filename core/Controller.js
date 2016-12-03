@@ -36,6 +36,7 @@ class Controller extends EventEmitter {
 
         sopranoClient.on('dispose', this.dispose.bind(this));
         sopranoClient.on('connect', this._handleConnect);
+        sopranoClient.on('close', this.emit.bind(this, 'disconnect'));
         this._handleConnect();
     }
 
@@ -77,8 +78,8 @@ class Controller extends EventEmitter {
         this.canWrite && this.connected &&
         ((async function () {
             while (this.connected){
-                let event = await this.whichever('disposed', 'deque');
-                if(event.eventName === 'disposed'){
+                let event = await this.whichever('disposed', 'disconnect', 'deque');
+                if(event.eventName !== 'deque'){
                     break;
                 }
                 try{
