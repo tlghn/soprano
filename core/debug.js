@@ -5,6 +5,7 @@ const path = require('path');
 const root = path.normalize(path.dirname(require.main.filename));
 const SEP = path.normalize('/');
 const NODE_MODULES = `${SEP}node_modules${SEP}`;
+const cluster = require('cluster');
 
 function _getCallerFile() {
     var originalFunc = Error.prepareStackTrace;
@@ -38,8 +39,12 @@ function _getCallerFile() {
     }
 
     let appName = path.basename(appPath);
+    let workerId = '';
+    if(cluster.isWorker){
+        workerId = `:[W<${cluster.worker.id}>]`;
+    }
 
-    return `${appName}:${path.basename(callerfile.substr(appPath.length + 1).replace(/\\+|\/+/g, ':'), '.js')}`;
+    return `${appName}:${path.basename(callerfile.substr(appPath.length + 1).replace(/\\+|\/+/g, ':'), '.js')}${workerId}`;
 }
 
 module.exports = function () {
