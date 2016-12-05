@@ -134,7 +134,12 @@ class SopranoServer extends Slave {
 
         this.net.listen(options);
 
-        await this.whichever('error', 'listening');
+        try{
+            await this.whichever('error', 'listening');
+        } catch (err){
+            this.dispose();
+            throw err;
+        }
 
         return this;
     }
