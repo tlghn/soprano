@@ -201,7 +201,7 @@ class MemoryAdapter extends Adapter {
             await this._sendReceiveFromMaster('call', {name: '_upsert', params:[id]});
         }
 
-        controller.on('close', async function (id) {
+        controller.on('disposed', async function (id) {
             await this.remove(id);
         }.bind(this, id));
 

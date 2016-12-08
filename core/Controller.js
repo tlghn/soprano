@@ -36,7 +36,13 @@ class Controller extends EventEmitter {
 
         sopranoClient.on('disposed', this.dispose.bind(this));
         sopranoClient.on('connect', this._handleConnect);
-        sopranoClient.on('close', this.emit.bind(this, 'disconnect'));
+        sopranoClient.on('close', function () {
+            this.emit('disconnect');
+
+            if(this.client.server){
+                this.dispose();
+            }
+        }.bind(this));
         this._handleConnect();
     }
 
