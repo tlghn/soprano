@@ -151,7 +151,7 @@ class MemoryAdapter extends Adapter {
         const script = new vm.Script(`(${state.script})`);
         let host = {
             adapter: this,
-            global:
+            global
         };
 
         function *task(_ids, script, ids, host) {
