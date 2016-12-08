@@ -76,19 +76,15 @@ class Controller extends EventEmitter {
                     if(EE.listenerCount(this, 'error')){
                         this.emit('error', err);
                     }
+
                     if(this.connected){
                         debug('%s:Controller >>> Error occurs while reading from %s:%s %s', this.protocol.constructor.name, this.remoteAddress, this.remotePort, err.message);
-                        try{
-                            await this._handle(err);
-                        } catch (err) {
-
+                        if(!read){
+                            return this.client.end();
                         }
+                        await this._handle(err);
                     } else {
                         break;
-                    }
-
-                    if(!read && this.client.server){
-                        return await this.client.end();
                     }
                 } finally {
                     await input.release();
