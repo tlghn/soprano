@@ -28,6 +28,7 @@ class SopranoServer extends Slave {
             case 'connection':
                 let client = args[0];
                 client.setNoDelay(true);
+                client.on('close', client.dispose.bind(client));
 
                 try{
                     let reader = new Reader(client);
