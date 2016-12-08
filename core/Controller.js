@@ -88,7 +88,7 @@ class Controller extends EventEmitter {
                     }
 
                     if(!read && this.client.server){
-                        this.client.dispose();
+                        this.client.end();
                     }
                 } finally {
                     await input.release();
