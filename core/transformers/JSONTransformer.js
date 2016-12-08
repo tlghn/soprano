@@ -10,10 +10,14 @@ class JSONTransformer extends stream.Transform {
     }
 
     _transform(data, encoding, cb){
-        if(this.__input){
-            cb(null, JSON.parse(data.toString('utf8')));
-        } else {
-            cb(null, Buffer.from(JSON.stringify(data), 'utf8'));
+        try{
+            if(this.__input){
+                cb(null, JSON.parse(data.toString('utf8')));
+            } else {
+                cb(null, Buffer.from(JSON.stringify(data), 'utf8'));
+            }
+        }catch (err){
+            cb(err);
         }
     }
 }
