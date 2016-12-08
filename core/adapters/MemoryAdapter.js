@@ -149,16 +149,20 @@ class MemoryAdapter extends Adapter {
         }
         const vm = require('vm');
         const script = new vm.Script(`(${state.script})`);
+        let host = {
+            adapter: this,
+            global:
+        };
 
-        function *task(_ids, script, ids) {
+        function *task(_ids, script, ids, host) {
             for(let id of ids){
                 let current = _ids.get(id);
                 if(!current) continue;
-                yield script.runInNewContext(current)(state.arg);
+                yield script.runInNewContext(current)(state.arg, host);
             }
-        };
+        }
 
-        var result = [...task(this._ids, script, ids)];
+        var result = [...task(this._ids, script, ids, host)];
         if(result.length && !Array.isArray(arguments[0])){
             result = result[0];
         }
@@ -173,8 +177,12 @@ class MemoryAdapter extends Adapter {
         const vm = require('vm');
         const script = new vm.Script(`(${state.script})`);
         const result = [];
+        let host = {
+            adapter: this,
+            global
+        };
         for(let entry of this._ids){
-            if(script.runInNewContext(entry[1])(state.arg)) {
+            if(script.runInNewContext(entry[1])(state.arg, host)) {
                 result.push(entry[0]);
             }
         }
