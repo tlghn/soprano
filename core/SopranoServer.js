@@ -15,6 +15,7 @@ const stream = require('stream');
 const Disposable = require('./Disposable');
 const Reader = require('./Reader');
 const Writer = require('./Writer');
+const debug = require('./debug')();
 
 class SopranoServer extends Slave {
 
@@ -28,7 +29,9 @@ class SopranoServer extends Slave {
             case 'connection':
                 let client = args[0];
                 client.setNoDelay(true);
-                client.on('close', client.dispose.bind(client));
+                client.base.on('close', function () {
+                    this.dispose();
+                }.bind(client));
 
                 try{
                     let reader = new Reader(client);
