@@ -40,5 +40,6 @@ module.exports = {
     connected: Symbol('connected'),
     server: Symbol('server'),
     header: Symbol('header'),
-    middlewares: Symbol('middlewares')
+    middlewares: Symbol('middlewares'),
+    state: Symbol('state')
 };

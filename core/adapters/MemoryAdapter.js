@@ -24,7 +24,7 @@ class MemoryAdapter extends Adapter {
         this.id = id;
 
         if(cluster.isMaster){
-            this.setResource(Symbols.ids, new DisposableMap(this));
+            this.setResource(Symbols.ids, new DisposableSet(this));
         }
 
         if(cluster.isMaster){
@@ -94,20 +94,23 @@ class MemoryAdapter extends Adapter {
             return;
         }
 
+        switch (message.name){
+            case 'call':
+                return ((async function (worker, message) {
+                    var name = message.args.name;
+                    if(typeof this[name] !== 'function'){
+                        throw new errors.InvalidOperationError('Unknown method %s', name);
+                    }
+                    var params = (message.args.params || []).slice();
+                    params.unshift(this);
+                    let f = this[name].bind.apply(this[name], params);
+                    message.result = await f();
+                    worker.send(message);
+                }).bind(this, worker, message))();
+        }
+
         if(cluster.isMaster){
             switch (message.name){
-                case 'call':
-                    return ((async function (worker, message) {
-                        var name = message.args.name;
-                        if(typeof this[name] !== 'function'){
-                            throw new errors.InvalidOperationError('Unknown method %s', name);
-                        }
-                        var params = (message.args.params || []).slice();
-                        params.unshift(this);
-                        let f = this[name].bind.apply(this[name], params);
-                        message.result = await f();
-                        worker.send(message);
-                    }).bind(this, worker, message))();
                 case 'postReply':
                     message.name = 'post';
                     return this._emitMessageResult(message);
@@ -133,60 +136,6 @@ class MemoryAdapter extends Adapter {
             this._emitMessageResult(message);
         }
 
-    }
-
-    /**
-     * @param ids
-     * @param state
-     * @private
-     */
-    _setState(ids, state){
-        if(typeof state.script !== 'string'){
-            throw new errors.InvalidArgumentError('state does not have valid script property');
-        }
-        if(!Array.isArray(ids)){
-            ids = [ids];
-        }
-        const vm = require('vm');
-        const script = new vm.Script(`(${state.script})`);
-        let host = {
-            adapter: this,
-            global
-        };
-
-        function *task(_ids, script, ids, host) {
-            for(let id of ids){
-                let current = _ids.get(id);
-                if(!current) continue;
-                yield script.runInNewContext(current)(state.arg, host);
-            }
-        }
-
-        var result = [...task(this._ids, script, ids, host)];
-        if(result.length && !Array.isArray(arguments[0])){
-            result = result[0];
-        }
-
-        return result;
-    }
-
-    _findIds(state){
-        if(typeof state.script !== 'string'){
-            throw new errors.InvalidArgumentError('state does not have valid script property');
-        }
-        const vm = require('vm');
-        const script = new vm.Script(`(${state.script})`);
-        const result = [];
-        let host = {
-            adapter: this,
-            global
-        };
-        for(let entry of this._ids){
-            if(script.runInNewContext(entry[1])(state.arg, host)) {
-                result.push(entry[0]);
-            }
-        }
-        return result;
     }
 
     /**
@@ -227,7 +176,7 @@ class MemoryAdapter extends Adapter {
 
     async getIds(){
         if(cluster.isMaster){
-            return [...this._ids.keys()];
+            return [...this._ids];
         }
 
         return await this._sendReceiveFromMaster('call', {name: 'getIds'});
@@ -235,9 +184,7 @@ class MemoryAdapter extends Adapter {
     }
 
     _upsert(id){
-        if(!this._ids.has(id)){
-            this._ids.set(id, {});
-        }
+        this._ids.add(id);
     }
 
     /**
@@ -263,32 +210,202 @@ class MemoryAdapter extends Adapter {
         return controller;
     }
 
-    _remove(id){
-        return this._ids.delete(id);
+    _remove(ids){
+        if(!Array.isArray(ids)){
+            ids = [ids];
+        }
+        let result = [];
+        for(let id of ids){
+            result.push(this._ids.delete(id));
+        }
+        if(result.length === 1 && !Array.isArray(arguments[0])){
+            result = result[0];
+        }
+        return result;
     }
 
-    async remove(id){
-        if(cluster.isMaster){
-            this._remove(id);
-        } else {
-            await this._sendReceiveFromMaster('call', {name: '_remove', params:[id]});
+    async remove(ids){
+        if(!Array.isArray(ids)){
+            ids = [ids];
         }
-        return await this._children.delete(id);
+
+        let result = [];
+
+        if(cluster.isMaster){
+            result.push(this._remove(ids));
+        } else {
+            result.push(await this._sendReceiveFromMaster('call', {name: '_remove', params:[ids]}));
+        }
+
+        for(let id of ids){
+            await this._children.delete(id);
+        }
+
+        if(result.length === 1 && !Array.isArray(arguments[0])){
+            result = result[0];
+        }
+
+        return result;
+    }
+
+    /**
+     * @param ids
+     * @param state
+     * @param direct
+     * @private
+     */
+    async _setState(ids, state, direct = false){
+
+        if(!ids.length) return [];
+
+        if(cluster.isMaster && !direct){
+            let workerMap = new Map();
+            for(let id of ids){
+                try{
+                    let worker = MemoryAdapter.getWorkerFromId(id);
+                    if(!workerMap.has(worker)){
+                        workerMap.set(worker, new Set());
+                    }
+                    workerMap.get(worker).add(id);
+                } catch (err){
+                }
+            }
+
+            return await Promise.all(
+                [...workerMap].map(entry => {
+                    if(!entry[0]){
+                        return this._setState([...entry[1]], state, true)
+                    }
+                    return this._sendReceiveFromWorker(entry[0], 'call', {name: '_setState', params: [[...entry[1]], state]});
+                })
+            );
+        }
+
+        const vm = require('vm');
+        const script = new vm.Script(`(${state.script})`);
+
+        function *task(adapter, global, children, script, arg, ids) {
+            for(let id of ids){
+                let current = children.get(id);
+                if (!current) continue;
+                let stateObj = current.getResource(Symbols.state);
+                if (!stateObj) {
+                    current.setResource(Symbols.state, stateObj = {});
+                }
+                yield script.runInNewContext(stateObj)(arg, {
+                    controller: current,
+                    adapter,
+                    global
+                });
+            }
+        }
+
+        return [...task(this, global, this._children, script, state.arg, ids)];
     }
 
     async setState(ids, state){
-        if(cluster.isMaster){
-            return this._setState(ids, state);
+
+        if(typeof state.script !== 'string'){
+            throw new errors.InvalidArgumentError('state does not have valid script property');
         }
-        return await this._sendReceiveFromMaster('call', {name:'setState', params:[ids, state]});
+
+        if(!Array.isArray(ids)){
+            ids = [ids];
+        }
+
+        let result = [];
+
+        let myIds = ids.filter(id => this._children.has(id));
+        let ids = ids.filter(id => !this._children.has(id));
+
+        if(myIds.length){
+            result.push(this._setState(myIds, state, true));
+        }
+
+        if(ids.length){
+            if(cluster.isMaster){
+                result.push(this._setState(ids, state));
+            } else {
+                result.push(this._sendReceiveFromMaster('call', {name:'_setState', params:[ids, state]}));
+            }
+        }
+
+        if(result.length){
+            result = await Promise.all(result);
+        }
+
+        if(result.length === 1 && !Array.isArray(arguments[0])){
+            result = result[0];
+        }
+
+        return result;
+    }
+
+    /**
+     * @param state
+     * @param direct
+     * @returns {Array}
+     * @private
+     */
+    async _findIds(state, direct = false){
+
+        if(cluster.isMaster && !direct) {
+            let workerMap = new Map();
+            for (let id of this._ids) {
+                try {
+                    let worker = MemoryAdapter.getWorkerFromId(id);
+                    if (!workerMap.has(worker)) {
+                        workerMap.set(worker, new Set());
+                    }
+                    workerMap.get(worker).add(id);
+                } catch (err) {
+                }
+            }
+
+            return (await Promise.all(
+                [...workerMap].map(entry => {
+                    if (!entry[0]) {
+                        return this._findIds([...entry[1]], state, true)
+                    }
+                    return this._sendReceiveFromWorker(entry[0], 'call', {
+                        name: '_findIds',
+                        params: [[...entry[1]], state]
+                    });
+                })
+            )).reduce((prev, cur) => prev.concat(cur), []);
+        }
+
+        const vm = require('vm');
+        const script = new vm.Script(`(${state.script})`);
+        const result = [];
+        for(let controller of this._children.values()){
+            let host = {
+                adapter: this,
+                global,
+                controller
+            };
+            let stateObj = controller.getResource(Symbols.state);
+            if(!stateObj){
+                controller.setResource(Symbols.state, stateObj = {});
+            }
+            if(script.runInNewContext(stateObj)(state.arg, host)) {
+                result.push(controller.id);
+            }
+        }
+        return result;
     }
 
     async findIds(state){
+
+        if(typeof state.script !== 'string'){
+            throw new errors.InvalidArgumentError('state does not have valid script property');
+        }
+        
         if(cluster.isMaster){
             return await this._findIds(state);
         }
 
-        return await this._sendReceiveFromMaster('call', {name: 'findIds', params:[state]});
+        return await this._sendReceiveFromMaster('call', {name: '_findIds', params:[state]});
     }
 
     async _post(ids, data){
@@ -327,6 +444,7 @@ class MemoryAdapter extends Adapter {
     static generateId(controller){
         return `W<${cluster.isMaster ? '' : cluster.worker.id}>+${controller.remoteAddress}:${controller.remotePort}`;
     }
+
     static getWorkerFromId(id){
         MemoryAdapter.throwIfWorker();
         var m = (/^W\<(.*?)\>/).exec(id);
@@ -350,6 +468,7 @@ class MemoryAdapter extends Adapter {
             throw new errors.InvalidOperationError('cluster is worker');
         }
     }
+
     static throwIfMaster(){
         if(cluster.isMaster){
             throw new errors.InvalidOperationError('cluster is master');
