@@ -13,6 +13,7 @@ const EventBridge = require('./EventBridge');
 const FLAG_READ = 1;
 const FLAG_WRITE = 2;
 const debug = require('./debug')();
+const EE = require('events');
 
 class Controller extends EventEmitter {
     /**
@@ -70,8 +71,16 @@ class Controller extends EventEmitter {
                     debug('%s:Controller >>> Incoming data processed for %s:%s', this.protocol.constructor.name, this.remoteAddress, this.remotePort);
 
                 } catch (err){
+                    if(EE.listenerCount(this, 'error')){
+                        this.emit('error', err);
+                    }
                     if(this.connected){
-                        debug('%s:Controller >>> Error occurs while reading from %s:%s', this.protocol.constructor.name, this.remoteAddress, this.remotePort);
+                        debug('%s:Controller >>> Error occurs while reading from %s:%s %s', this.protocol.constructor.name, this.remoteAddress, this.remotePort, err.message);
+                        try{
+                            await this._handle(err);
+                        } catch (err) {
+
+                        }
                     } else {
                         break;
                     }
@@ -104,9 +113,11 @@ class Controller extends EventEmitter {
                     this.setResource(Symbols.ready, true);
                     this._deque();
                 } catch (err) {
-                    console.log(err);
+                    if(EE.listenerCount(this, 'error')){
+                        this.emit('error', err);
+                    }
                     if(this.connected){
-                        debug('%s:Controller >>> Error occurs while writing to %s:%s', this.protocol.constructor.name, this.remoteAddress, this.remotePort);
+                        debug('%s:Controller >>> Error occurs while writing to %s:%s %s', this.protocol.constructor.name, this.remoteAddress, this.remotePort, err.message);
                     } else {
                         break;
                     }
