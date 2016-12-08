@@ -88,8 +88,7 @@ class Controller extends EventEmitter {
                     }
 
                     if(!read && this.client.server){
-                        this.client.end();
-                        return;
+                        return await this.client.end();
                     }
                 } finally {
                     await input.release();
@@ -182,7 +181,7 @@ class Controller extends EventEmitter {
      * @returns {boolean}
      */
     get connected(){
-        return this.client.connected;
+        return this.client && this.client.connected;
     }
 
     /**
