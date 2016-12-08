@@ -52,8 +52,10 @@ class Controller extends EventEmitter {
         ((async function() {
             while (this.connected){
                 let input = await this.client.createInput(this.protocol.createInput(this.client, this.header));
+                let read = false;
                 try{
                     let data = await input.read();
+                    read = true;
                     debug('%s:Controller >>> Received data from %s:%s', this.protocol.constructor.name, this.remoteAddress, this.remotePort);
 
                     if(this.client.server){
@@ -83,6 +85,10 @@ class Controller extends EventEmitter {
                         }
                     } else {
                         break;
+                    }
+
+                    if(!read && this.client.server){
+                        this.client.dispose();
                     }
                 } finally {
                     await input.release();
