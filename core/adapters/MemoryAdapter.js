@@ -288,10 +288,7 @@ class MemoryAdapter extends Adapter {
             for(let id of ids){
                 let current = children.get(id);
                 if (!current) continue;
-                let stateObj = current.getResource(Symbols.state);
-                if (!stateObj) {
-                    current.setResource(Symbols.state, stateObj = {});
-                }
+                let stateObj = current.ensureState();
                 yield script.runInNewContext(stateObj)(arg, {
                     controller: current,
                     adapter,
@@ -384,10 +381,7 @@ class MemoryAdapter extends Adapter {
                 global,
                 controller
             };
-            let stateObj = controller.getResource(Symbols.state);
-            if(!stateObj){
-                controller.setResource(Symbols.state, stateObj = {});
-            }
+            let stateObj = controller.ensureState();
             if(script.runInNewContext(stateObj)(state.arg, host)) {
                 result.push(controller.id);
             }

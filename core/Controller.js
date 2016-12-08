@@ -175,6 +175,17 @@ class Controller extends EventEmitter {
         return !!(this.getResource(Symbols.flags) & FLAG_WRITE);
     }
 
+    get state(){
+        return this.getResource(Symbols.state);
+    }
+
+    ensureState(){
+        if(!this.hasResource(Symbols.state)){
+            this.setState(Symbols.state, {});
+        }
+        return this.state;
+    }
+
     /**
      * @private
      */
