@@ -57,6 +57,10 @@ class Disposable {
 
         if(this[DISPOSED]) return;
 
+        if(this instanceof EE){
+            this.emit('dispose');
+        }
+
         if(typeof this._onDispose === 'function'){
             this._onDispose();
         }

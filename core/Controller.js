@@ -34,7 +34,7 @@ class Controller extends EventEmitter {
         this.setResource(Symbols.netEvents, EventBridge.create(sopranoClient, this, sopranoClient.eventNames));
 
 
-        sopranoClient.on('dispose', this.dispose.bind(this));
+        sopranoClient.on('disposed', this.dispose.bind(this));
         sopranoClient.on('connect', this._handleConnect);
         sopranoClient.on('close', this.emit.bind(this, 'disconnect'));
         this._handleConnect();
