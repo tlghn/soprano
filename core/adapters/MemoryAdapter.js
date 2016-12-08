@@ -313,7 +313,7 @@ class MemoryAdapter extends Adapter {
         let result = [];
 
         let myIds = ids.filter(id => this._children.has(id));
-        let ids = ids.filter(id => !this._children.has(id));
+        ids = ids.filter(id => !this._children.has(id));
 
         if(myIds.length){
             result.push(this._setState(myIds, state, true));
