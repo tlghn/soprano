@@ -54,7 +54,7 @@ class RequestResponseProtocol extends Protocol {
      * @param header {Buffer}
      */
     handover(connection, header){
-        
+        this.emit('connection', connection);
         ((async function (connection, header) {
             let ip = connection.remoteAddress;
             let port = connection.remotePort;

@@ -56,6 +56,7 @@ class StreamProtocol extends Protocol {
         debug('%s >> connection accepted from %s:%s', this.constructor.name, connection.remoteAddress, connection.remotePort);
         let controller = await this.createServerController(connection);
         controller.header = header;
+        this.emit('connection', connection, controller);
         return await this.adapter.add(controller);
     }
 
