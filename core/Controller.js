@@ -187,7 +187,7 @@ class Controller extends EventEmitter {
 
     ensureState(){
         if(!this.hasResource(Symbols.state)){
-            this.setState(Symbols.state, {});
+            this.setResource(Symbols.state, {});
         }
         return this.state;
     }
