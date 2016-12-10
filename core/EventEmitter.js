@@ -144,6 +144,23 @@ function when() {
         }));
 }
 
+function emitAsync() {
+    return async function () {
+        var args = Array.from(arguments);
+        let name = args.shift();
+        args.unshift(this);
+        
+        let events = this._events;
+        if(!events || !(events = events[name])){
+            return [];
+        }
+        
+        return await Promise.all(
+            events.map(event => (event.bind.apply(event, args))())
+        );
+        
+    }.bind(this);
+}
 
 class EventEmitter extends EE {
     constructor(){
@@ -160,6 +177,10 @@ class EventEmitter extends EE {
 
     get whichever(){
         return whichever.call(this);
+    }
+    
+    get emitAsync(){
+        return emitAsync.call(this);
     }
 
     static attach(target){
@@ -179,7 +200,8 @@ class EventEmitter extends EE {
         Object.defineProperties(target, {
             when: { get: when },
             whatever: {get: whatever },
-            whichever: {get: whichever }
+            whichever: {get: whichever },
+            emitAsync: {get: emitAsync }
         });
 
         return target;
