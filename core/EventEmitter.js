@@ -12,6 +12,7 @@ const EMIT = Symbol('emit');
 const EVENT_EMITTER = Symbol('EventEmitter');
 const Id = require('./Id');
 const WHICEVER_COUNT = new Id();
+const errors = require('./errors');
 
 function whichever() {
 
@@ -154,11 +155,19 @@ function emitAsync() {
         if(!events || !(events = events[name])){
             return [];
         }
-        
-        return await Promise.all(
-            events.map(event => (event.bind.apply(event, args))())
-        );
-        
+
+        if(typeof events === 'function'){
+            return await (events.bind.apply(events, args))();
+        }
+
+        if(Array.isArray(events)){
+            return await Promise.all(
+                events.map(event => (event.bind.apply(event, args))())
+            );
+        }
+
+        throw new errors.InvalidOperationError('Invalid event list: %s', events.constructor.name);
+
     }.bind(this);
 }
 
