@@ -260,7 +260,15 @@ class NetClient extends Client {
             Symbols.netEvents,
             EventBridge.create(base, this, NET_CLIENT_EVENTS, netEventArgumentMapper)
         );
+
+        this._onBaseReady(base);
     }
+
+    /**
+     * @param base {net.Socket}
+     * @protected
+     */
+    _onBaseReady(base){}
 
     /**
      *
@@ -491,7 +499,15 @@ class NetServer extends Server {
                 netEventArgumentMapper
             )
         );
+
+        this._onBaseReady(base);
     }
+
+    /**
+     * @param base {net.Socket}
+     * @protected
+     */
+    _onBaseReady(base){}
 
     /***
      * @returns net.Server
