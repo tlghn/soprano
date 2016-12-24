@@ -63,6 +63,17 @@ class DisposableMap extends Map {
         }
         super.set(key, value);
     }
+
+    *values(){
+        let values = super.values();
+        for(let value of values){
+            if(value instanceof WeakMap){
+                yield value.get(this);
+            } else {
+                yield value;
+            }
+        }
+    }
 }
 
 Disposable.attach(DisposableMap);
