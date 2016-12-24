@@ -1,6 +1,6 @@
 {
   "name": "soprano",
-  "version": "1.0.33",
+  "version": "1.0.34",
   "description": "Abstract Multi-protocol Socket Library for NodeJs",
   "main": "index.js",
   "scripts": {

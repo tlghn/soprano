@@ -18,7 +18,7 @@ class DisposableMap extends Map {
     }
 
     _onDispose(){
-        for(let value of this.values()){
+        for(let value of super.values()){
             if(Disposable.isDisposable(value)){
                 value.dispose();
             }
